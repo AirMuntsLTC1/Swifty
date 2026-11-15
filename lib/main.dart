@@ -1,5 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/state/suggestionUserState.dart';
 import 'package:flutter_twitter_clone/state/badgeState.dart';
 import 'package:flutter_twitter_clone/state/settingsState.dart';

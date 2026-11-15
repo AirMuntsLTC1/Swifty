@@ -1,5 +1,5 @@
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
 import 'package:flutter_twitter_clone/ui/page/common/usersListPage.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/follow/followListState.dart';

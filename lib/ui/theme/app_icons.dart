@@ -1,4 +1,3 @@
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 part of 'theme.dart';
 
 /// App icons. All icons are Lucide icons (thin, clean line icons).
