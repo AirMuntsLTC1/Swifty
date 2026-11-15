@@ -1,6 +1,6 @@
 // ignore_for_file: prefer_const_constructors
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_twitter_clone/ui/page/Auth/selectAuthMethod.dart';
 import 'package:flutter_twitter_clone/ui/page/Auth/verifyEmail.dart';
 import 'package:flutter_twitter_clone/ui/page/common/splash.dart';

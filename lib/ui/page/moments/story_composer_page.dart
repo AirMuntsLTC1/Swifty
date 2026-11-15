@@ -4,7 +4,7 @@
 // caption, or text on a colored background. Pops with `true` when posted.
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -108,7 +108,7 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                   decoration: BoxDecoration(
                     color: _canPost
                         ? AppColor.primary
-                        : AppColor.lightGrey.withOpacity(0.4),
+                        : AppColor.lightGrey.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(

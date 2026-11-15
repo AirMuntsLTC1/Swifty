@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Icons a list can use. The key is what is stored in lists.icon.
 class SwiflyListIcons {

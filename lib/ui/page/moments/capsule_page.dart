@@ -3,7 +3,7 @@
 // Plays a list of posts full-screen, like a story deck. Each post stays for
 // about 7 seconds. Tap right or left to skip, long-press to pause, swipe to
 // browse. Used by trending capsules (live: true) and by the explore grid.
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
