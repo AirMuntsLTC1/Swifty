@@ -151,9 +151,9 @@ class SettingTextTile extends StatelessWidget {
 
 /// Row that runs an action when tapped.
 class SettingActionTile extends StatelessWidget {
-  const SettingActionTile({
+  const SettingActionTile(
+    this.title, {
     super.key,
-    required this.title,
     required this.onTap,
     this.subtitle,
     this.destructive = false,
@@ -188,7 +188,7 @@ class SettingActionTile extends StatelessWidget {
 
 /// Read-only row (for example the username or email).
 class SettingInfoTile extends StatelessWidget {
-  const SettingInfoTile({super.key, required this.title, this.subtitle});
+  const SettingInfoTile(this.title, {super.key, this.subtitle});
 
   final String title;
   final String? subtitle;
