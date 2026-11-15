@@ -2,9 +2,7 @@
 
 import 'dart:async';
 
-import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_database/firebase_database.dart' as dabase;
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../helper/utility.dart';
 import '../model/feedModel.dart';
