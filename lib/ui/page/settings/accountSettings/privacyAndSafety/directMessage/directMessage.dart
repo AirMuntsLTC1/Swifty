@@ -1,12 +1,11 @@
+// lib/ui/page/settings/accountSettings/privacyAndSafety/directMessage/directMessage.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_twitter_clone/model/user.dart';
-import 'package:flutter_twitter_clone/state/authState.dart';
+import 'package:provider/provider.dart';
+
 import 'package:flutter_twitter_clone/state/settingsState.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
-import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsRowWidget.dart';
-import 'package:flutter_twitter_clone/ui/theme/theme.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settings_controls.dart';
 
 class DirectMessagesPage extends StatefulWidget {
   const DirectMessagesPage({Key? key}) : super(key: key);
@@ -27,47 +26,38 @@ class _DirectMessagesPageState extends State<DirectMessagesPage> {
   @override
   Widget build(BuildContext context) {
     final st = context.watch<SettingsState>();
-    var user = Provider.of<AuthState>(context).userModel ?? UserModel();
     return Scaffold(
-      backgroundColor: TwitterColor.white,
-      appBar: SettingsAppBar(
-        title: 'Direct Messages',
-        subtitle: user.userName,
-      ),
+      backgroundColor: Colors.white,
+      appBar: const SettingsAppBar(title: 'Direct messages'),
       body: ListView(
         physics: const BouncingScrollPhysics(),
-        children: <Widget>[
-          HeaderWidget(
-            'Direct Messages',
-            secondHeader: true,
-          ),
-          SettingRowWidget(
-            "Receive message requests",
-            navigateTo: null,
-            showDivider: false,
-            switchValue: st.get('receive_message_requests'),
-            onSwitchChanged: (v) => st.set('receive_message_requests', v),
-            visibleSwitch: true,
-            vPadding: 20,
+        children: [
+          const HeaderWidget('Requests'),
+          SettingSwitchTile(
+            title: 'Receive message requests from everyone',
             subtitle:
-                'You will be able to receive Direct Message requests from anyone on Swifs, even if you don\'t follow them.',
+                'When this is off, only people you follow can send you messages.',
+            value: st.getBool('receive_message_requests'),
+            onChanged: (v) => st.setValue('receive_message_requests', v),
           ),
-          SettingRowWidget(
-            "Show read receipts",
-            navigateTo: null,
-            showDivider: false,
-            switchValue: st.get('read_receipts'),
-            onSwitchChanged: (v) => st.set('read_receipts', v),
-            visibleSwitch: true,
+          SettingSwitchTile(
+            title: 'Filter lower-quality messages',
             subtitle:
-                'When someone sends you a message, people in the conversation will know you\'ve seen it. If you turn off this setting, you won\'t be able to see read receipt from others.',
+                'Move messages from accounts you do not follow into a separate list.',
+            value: st.getBool('filter_messages'),
+            onChanged: (v) => st.setValue('filter_messages', v),
           ),
+          const HeaderWidget('Read receipts', secondHeader: true),
+          SettingSwitchTile(
+            title: 'Show read receipts',
+            subtitle:
+                'Let people see when you have read their messages. You will also see theirs.',
+            value: st.getBool('read_receipts'),
+            onChanged: (v) => st.setValue('read_receipts', v),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 }
-
-
-
-

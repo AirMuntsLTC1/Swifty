@@ -1,174 +1,68 @@
+// lib/ui/page/settings/accountSettings/displaySettings/displayAndSoundPage.dart
 import 'package:flutter/material.dart';
+
+import 'package:flutter_twitter_clone/state/deviceSettings.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart';
-import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsRowWidget.dart';
-import 'package:flutter_twitter_clone/ui/theme/theme.dart';
-import 'package:flutter_twitter_clone/widgets/customAppBar.dart';
-import 'package:flutter_twitter_clone/widgets/customWidgets.dart';
-import 'package:flutter_twitter_clone/widgets/newWidget/title_text.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settings_controls.dart';
 
 class DisplayAndSoundPage extends StatelessWidget {
   const DisplayAndSoundPage({Key? key}) : super(key: key);
 
-  void openBottomSheet(
-    BuildContext context,
-    double height,
-    Widget child,
-  ) async {
-    await showModalBottomSheet(
-      backgroundColor: Colors.transparent,
-      context: context,
-      builder: (context) {
-        return Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: TwitterColor.white,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(15),
-              topRight: Radius.circular(15),
-            ),
-          ),
-          child: child,
-        );
-      },
-    );
-  }
-
-  void openDarkModeSettings(BuildContext context) {
-    openBottomSheet(
-      context,
-      250,
-      Column(
-        children: <Widget>[
-          const SizedBox(height: 5),
-          Container(
-            width: 40,
-            height: 5,
-            decoration: BoxDecoration(
-              color: TwitterColor.paleSky50,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: TitleText('Dark Mode'),
-          ),
-          const Divider(height: 0),
-          _row("On"),
-          const Divider(height: 0),
-          _row("Off"),
-          const Divider(height: 0),
-          _row("Automatic at sunset"),
-        ],
-      ),
-    );
-  }
-
-  void openDarkModeAppearanceSettings(BuildContext context) {
-    openBottomSheet(
-      context,
-      190,
-      Column(
-        children: <Widget>[
-          const SizedBox(height: 5),
-          Container(
-            width: 40,
-            height: 5,
-            decoration: BoxDecoration(
-              color: TwitterColor.paleSky50,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: TitleText('Dark mode appearance'),
-          ),
-          const Divider(height: 0),
-          _row("Dim"),
-          const Divider(height: 0),
-          _row("Light out"),
-        ],
-      ),
-    );
-  }
-
-  Widget _row(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 5),
-      child: RadioListTile(
-        value: false,
-        groupValue: true,
-        onChanged: (val) {},
-        title: Text(text),
-        controlAffinity: ListTileControlAffinity.trailing,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TwitterColor.white,
-      appBar: CustomAppBar(
-        isBackButton: true,
-        title: customTitleText(
-          'Display and Sound',
+      backgroundColor: Colors.white,
+      appBar: const SettingsAppBar(title: 'Display and sound'),
+      body: DeviceSettingsBuilder(
+        builder: (context, s) => ListView(
+          physics: const BouncingScrollPhysics(),
+          children: [
+            const HeaderWidget('Media'),
+            SettingSwitchTile(
+              title: 'Media previews',
+              subtitle: 'Show a preview of photos and links before you open them.',
+              value: s.mediaPreviews,
+              onChanged: (v) => DeviceSettings.instance.update('media_previews', v),
+            ),
+            const HeaderWidget('Display', secondHeader: true),
+            SettingChoiceTile<String>(
+              title: 'Dark mode',
+              value: s.darkModeChoice,
+              options: const {
+                'light': 'Off',
+                'dark': 'On',
+                'system': 'Use device setting',
+              },
+              onChanged: (v) => DeviceSettings.instance.update('dark_mode', v),
+            ),
+            SettingChoiceTile<String>(
+              title: 'Dark mode appearance',
+              subtitle: 'Used when dark mode is on',
+              value: s.darkAppearance,
+              options: const {
+                'dim': 'Dim',
+                'lights_out': 'Lights out',
+              },
+              onChanged: (v) => DeviceSettings.instance.update('dark_appearance', v),
+            ),
+            const HeaderWidget('Sound', secondHeader: true),
+            SettingSwitchTile(
+              title: 'Sound effects',
+              value: s.soundEffects,
+              onChanged: (v) => DeviceSettings.instance.update('sound_effects', v),
+            ),
+            const HeaderWidget('Web browser', secondHeader: true),
+            SettingSwitchTile(
+              title: 'Use in-app browser',
+              subtitle: 'Open links inside Swifs instead of your browser app.',
+              value: s.inAppBrowser,
+              onChanged: (v) => DeviceSettings.instance.update('in_app_browser', v),
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
-      ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        children: <Widget>[
-          const HeaderWidget('Media'),
-          const SettingRowWidget(
-            "Media Previews",
-            showCheckBox: false,
-          ),
-          const Divider(height: 0),
-          const HeaderWidget('Display'),
-          SettingRowWidget(
-            "Dark Mode",
-            subtitle: 'Off',
-            onPressed: () {
-              openDarkModeSettings(context);
-            },
-            showDivider: false,
-          ),
-          SettingRowWidget(
-            "Dark Mode appearance",
-            subtitle: 'Dim',
-            onPressed: () {
-              openDarkModeAppearanceSettings(context);
-            },
-            showDivider: false,
-          ),
-          const SettingRowWidget(
-            "Emoji",
-            subtitle:
-                'Use the Swifs set instead of your device\'s default set',
-            showDivider: false,
-            showCheckBox: false,
-          ),
-          const HeaderWidget(
-            'Sound',
-            secondHeader: true,
-          ),
-          const SettingRowWidget(
-            "Sound effects",
-            // vPadding: 15,
-            showCheckBox: false,
-          ),
-          const HeaderWidget(
-            'Web browser',
-            secondHeader: false,
-          ),
-          const SettingRowWidget(
-            "Use in-app browser",
-            subtitle: 'Open external links with Swifs browser',
-            showCheckBox: false,
-          ),
-        ],
       ),
     );
   }
 }
-
-

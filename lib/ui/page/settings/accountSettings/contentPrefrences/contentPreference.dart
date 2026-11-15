@@ -1,53 +1,74 @@
+// lib/ui/page/settings/accountSettings/contentPrefrences/contentPreference.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_twitter_clone/model/user.dart';
-import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart';
-import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
-import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsRowWidget.dart';
-import 'package:flutter_twitter_clone/state/authState.dart';
-import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:provider/provider.dart';
 
-class ContentPrefrencePage extends StatelessWidget {
+import 'package:flutter_twitter_clone/state/settingsState.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/accountSettings/contentPrefrences/trends/trendsPage.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/accountSettings/privacyAndSafety/blockedAccountsPage.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/accountSettings/privacyAndSafety/mutedWordsPage.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settings_controls.dart';
+
+class ContentPrefrencePage extends StatefulWidget {
   const ContentPrefrencePage({Key? key}) : super(key: key);
 
   @override
+  State<ContentPrefrencePage> createState() => _ContentPrefrencePageState();
+}
+
+class _ContentPrefrencePageState extends State<ContentPrefrencePage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) context.read<SettingsState>().ensureLoaded();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    var user = Provider.of<AuthState>(context).userModel ?? UserModel();
+    final st = context.watch<SettingsState>();
     return Scaffold(
-      backgroundColor: TwitterColor.white,
-      appBar: SettingsAppBar(
-        title: 'Content preferences',
-        subtitle: user.userName,
-      ),
+      backgroundColor: Colors.white,
+      appBar: const SettingsAppBar(title: 'Content preferences'),
       body: ListView(
         physics: const BouncingScrollPhysics(),
-        children: const <Widget>[
-          HeaderWidget('Explore'),
-          SettingRowWidget(
-            "Trends",
-            navigateTo: 'TrendsPage',
+        children: [
+          const HeaderWidget('Explore'),
+          SettingActionTile(
+            'Trends',
+            subtitle: 'Choose the place your trends come from',
+            onTap: () => openSettingsPage(context, const TrendsPage()),
           ),
-          Divider(height: 0),
-          SettingRowWidget(
-            "Search settings",
-            navigateTo: null,
+          const HeaderWidget('Language', secondHeader: true),
+          SettingChoiceTile<String>(
+            title: 'Recommendations language',
+            subtitle: 'Recommended posts, people and trends in this language',
+            value: st.getString('content_language'),
+            options: const {
+              'English': 'English',
+              'Indonesian': 'Indonesian',
+              'Spanish': 'Spanish',
+              'French': 'French',
+              'German': 'German',
+              'Portuguese': 'Portuguese',
+              'Other': 'Other',
+            },
+            onChanged: (v) => st.setValue('content_language', v),
           ),
-          HeaderWidget(
-            'Languages',
-            secondHeader: true,
+          const HeaderWidget('Safety', secondHeader: true),
+          SettingActionTile(
+            'Blocked accounts',
+            subtitle: 'Accounts you have blocked',
+            onTap: () => openSettingsPage(context, const BlockedAccountsPage()),
           ),
-          SettingRowWidget(
-            "Recommendations",
-            vPadding: 15,
-            subtitle:
-                "Select which language you want recommended Tweets, people, and trends to include",
+          SettingActionTile(
+            'Muted words',
+            subtitle: 'Hide notifications that contain these words',
+            onTap: () => openSettingsPage(context, const MutedWordsPage()),
           ),
-          HeaderWidget(
-            'Safety',
-            secondHeader: true,
-          ),
-          SettingRowWidget("Blocked accounts"),
-          SettingRowWidget("Muted accounts"),
+          const SizedBox(height: 24),
         ],
       ),
     );

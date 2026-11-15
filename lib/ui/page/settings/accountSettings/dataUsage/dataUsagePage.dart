@@ -1,199 +1,88 @@
+// lib/ui/page/settings/accountSettings/dataUsage/dataUsagePage.dart
 import 'package:flutter/material.dart';
+
+import 'package:flutter_twitter_clone/state/deviceSettings.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart';
-import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsRowWidget.dart';
-import 'package:flutter_twitter_clone/ui/theme/theme.dart';
-import 'package:flutter_twitter_clone/widgets/customAppBar.dart';
-import 'package:flutter_twitter_clone/widgets/customWidgets.dart';
-import 'package:flutter_twitter_clone/widgets/newWidget/title_text.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settings_controls.dart';
 
 class DataUsagePage extends StatelessWidget {
   const DataUsagePage({Key? key}) : super(key: key);
 
-  void openBottomSheet(
-    BuildContext context,
-    double height,
-    Widget child,
-  ) async {
-    await showModalBottomSheet(
-      backgroundColor: Colors.transparent,
-      context: context,
-      builder: (context) {
-        return Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: TwitterColor.white,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(15),
-              topRight: Radius.circular(15),
-            ),
-          ),
-          child: child,
-        );
-      },
-    );
-  }
-
-  void openDarkModeSettings(BuildContext context) {
-    openBottomSheet(
-      context,
-      250,
-      Column(
-        children: <Widget>[
-          const SizedBox(height: 5),
-          Container(
-            width: 40,
-            height: 5,
-            decoration: BoxDecoration(
-              color: TwitterColor.paleSky50,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 15),
-            child: TitleText('Data preference'),
-          ),
-          const Divider(height: 0),
-          _row("Mobile data & Wi-Fi"),
-          const Divider(height: 0),
-          _row("Wi-Fi only"),
-          const Divider(height: 0),
-          _row("Never"),
-        ],
-      ),
-    );
-  }
-
-  void openDarkModeAppearanceSettings(BuildContext context) {
-    openBottomSheet(
-      context,
-      190,
-      Column(
-        children: <Widget>[
-          const SizedBox(height: 5),
-          Container(
-            width: 40,
-            height: 5,
-            decoration: BoxDecoration(
-              color: TwitterColor.paleSky50,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: TitleText('Dark mode appearance'),
-          ),
-          const Divider(height: 0),
-          _row("Dim"),
-          const Divider(height: 0),
-          _row("Light out"),
-        ],
-      ),
-    );
-  }
-
-  Widget _row(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 5),
-      child: RadioListTile(
-        value: false,
-        groupValue: true,
-        onChanged: (val) {},
-        title: Text(text),
-        controlAffinity: ListTileControlAffinity.trailing,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TwitterColor.white,
-      appBar: CustomAppBar(
-        isBackButton: true,
-        title: customTitleText(
-          'Data Usage',
+      backgroundColor: Colors.white,
+      appBar: const SettingsAppBar(title: 'Data usage'),
+      body: DeviceSettingsBuilder(
+        builder: (context, s) => ListView(
+          physics: const BouncingScrollPhysics(),
+          children: [
+            const HeaderWidget('Data saver'),
+            SettingSwitchTile(
+              title: 'Data saver',
+              subtitle:
+                  'When enabled, lower-quality images load. This reduces your data usage for all Swifs accounts on this device.',
+              value: s.dataSaver,
+              onChanged: (v) => DeviceSettings.instance.update('data_saver', v),
+            ),
+            const HeaderWidget('Images', secondHeader: true),
+            SettingChoiceTile<String>(
+              title: 'High quality images',
+              subtitle: 'When high quality images should load',
+              value: s.imageQuality,
+              options: const {
+                'always': 'Mobile data and Wi-Fi',
+                'wifi': 'Wi-Fi only',
+                'never': 'Never',
+              },
+              onChanged: (v) => DeviceSettings.instance.update('image_quality', v),
+            ),
+            const HeaderWidget('Video', secondHeader: true),
+            SettingChoiceTile<String>(
+              title: 'High-quality video',
+              subtitle: 'When the highest quality available should play',
+              value: s.videoQuality,
+              options: const {
+                'wifi': 'Wi-Fi only',
+                'always': 'Mobile data and Wi-Fi',
+                'never': 'Never',
+              },
+              onChanged: (v) => DeviceSettings.instance.update('video_quality', v),
+            ),
+            SettingChoiceTile<String>(
+              title: 'Video autoplay',
+              subtitle: 'When video should play automatically',
+              value: s.videoAutoplay,
+              options: const {
+                'wifi': 'Wi-Fi only',
+                'always': 'Mobile data and Wi-Fi',
+                'never': 'Never',
+              },
+              onChanged: (v) => DeviceSettings.instance.update('video_autoplay', v),
+            ),
+            const HeaderWidget('Data sync', secondHeader: true),
+            SettingSwitchTile(
+              title: 'Sync data',
+              subtitle:
+                  'Allow Swifs to sync data in the background to enhance your experience.',
+              value: s.syncData,
+              onChanged: (v) => DeviceSettings.instance.update('sync_data', v),
+            ),
+            SettingChoiceTile<String>(
+              title: 'Sync interval',
+              value: s.syncInterval,
+              options: const {
+                'hourly': 'Every hour',
+                'daily': 'Daily',
+                'weekly': 'Weekly',
+              },
+              onChanged: (v) => DeviceSettings.instance.update('sync_interval', v),
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
-      ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        children: <Widget>[
-          const HeaderWidget('Data Saver'),
-          const SettingRowWidget(
-            "Data saver",
-            showCheckBox: true,
-            vPadding: 15,
-            showDivider: false,
-            subtitle:
-                'When enabled, video won\'t autoplay and lower-quality images load. This automatically reduces your data usage for all Swifs accounts on this device.',
-            visibleSwitch: null,
-          ),
-          const Divider(height: 0),
-          const HeaderWidget('Images'),
-          SettingRowWidget(
-            "High quality images",
-            subtitle:
-                'Mobile data & Wi-Fi \n\nSelect when high quality images should load.',
-            vPadding: 15,
-            onPressed: () {
-              openDarkModeSettings(context);
-            },
-            showDivider: false,
-            visibleSwitch: null,
-            showCheckBox: null,
-          ),
-          const HeaderWidget(
-            'Video',
-            secondHeader: true,
-          ),
-          SettingRowWidget(
-            "High-quality video",
-            subtitle:
-                'Wi-Fi only \n\nSelect when the highest quality available should play.',
-            vPadding: 15,
-            onPressed: () {
-              openDarkModeSettings(context);
-            },
-            visibleSwitch: null,
-            showCheckBox: null,
-          ),
-          SettingRowWidget(
-            "Video autoplay",
-            subtitle:
-                'Wi-Fi only \n\nSelect when video should play automatically.',
-            vPadding: 15,
-            onPressed: () {
-              openDarkModeSettings(context);
-            },
-            showCheckBox: null,
-            visibleSwitch: null,
-          ),
-          const HeaderWidget(
-            'Data sync',
-            secondHeader: true,
-          ),
-          const SettingRowWidget(
-            "Sync data",
-            showCheckBox: true,
-            visibleSwitch: null,
-          ),
-          const SettingRowWidget(
-            "Sync interval",
-            subtitle: 'Daily',
-            showCheckBox: null,
-            visibleSwitch: null,
-          ),
-          const SettingRowWidget(
-            null,
-            subtitle:
-                'Allow Swifs to sync data in the background to enhance your experience.',
-            vPadding: 10,
-            showCheckBox: null,
-            visibleSwitch: null,
-          ),
-        ],
       ),
     );
   }
 }
-
-

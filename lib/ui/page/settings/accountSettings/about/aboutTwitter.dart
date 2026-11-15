@@ -1,82 +1,76 @@
+// lib/ui/page/settings/accountSettings/about/aboutTwitter.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_twitter_clone/helper/utility.dart';
+
+import 'package:flutter_twitter_clone/helper/app_info.dart';
+import 'package:flutter_twitter_clone/helper/open_link.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/accountSettings/about/companyPage.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/accountSettings/about/legalPage.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart';
-import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsRowWidget.dart';
-import 'package:flutter_twitter_clone/ui/theme/theme.dart';
-import 'package:flutter_twitter_clone/widgets/customAppBar.dart';
-import 'package:flutter_twitter_clone/widgets/customWidgets.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
+import 'package:flutter_twitter_clone/ui/page/settings/widgets/settings_controls.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({Key? key}) : super(key: key);
 
+  void _openLegal(BuildContext context, String title, String body) {
+    openSettingsPage(context, LegalPage(title: title, body: body));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TwitterColor.white,
-      appBar: CustomAppBar(
-        isBackButton: true,
-        title: customTitleText(
-          'About Swifs',
-        ),
-      ),
+      backgroundColor: Colors.white,
+      appBar: const SettingsAppBar(title: 'About Swifs'),
       body: ListView(
         physics: const BouncingScrollPhysics(),
-        children: <Widget>[
-          const HeaderWidget(
-            'Help',
-            secondHeader: true,
-          ),
-          SettingRowWidget(
-            "Help Centre",
-            vPadding: 0,
-            showDivider: false,
-            onPressed: () {
-              Utility.launchURL(
-                  "https://github.com/TheAlphamerc/flutter_twitter_clone/issues");
-            },
+        children: [
+          const HeaderWidget('Help'),
+          SettingActionTile(
+            'Help centre',
+            onTap: () => openLink(context, AppInfo.helpCentreUrl),
           ),
           const HeaderWidget('Legal'),
-          const SettingRowWidget(
-            "Terms of Service",
-            showDivider: true,
+          SettingActionTile(
+            'Terms of service',
+            onTap: () => _openLegal(
+                context, 'Terms of service', LegalPage.termsOfService),
           ),
-          const SettingRowWidget(
-            "Privacy policy",
-            showDivider: true,
+          SettingActionTile(
+            'Privacy policy',
+            onTap: () => _openLegal(
+                context, 'Privacy policy', LegalPage.privacyPolicy),
           ),
-          const SettingRowWidget(
-            "Cookie use",
-            showDivider: true,
+          SettingActionTile(
+            'Cookie use',
+            onTap: () =>
+                _openLegal(context, 'Cookie use', LegalPage.cookieUse),
           ),
-          SettingRowWidget(
-            "Legal notices",
-            showDivider: true,
-            onPressed: () async {
-              showLicensePage(
-                context: context,
-                applicationName: 'Swifs',
-                applicationVersion: '1.0.0',
-                useRootNavigator: true,
-              );
-            },
+          SettingActionTile(
+            'Legal notices',
+            onTap: () => showLicensePage(
+              context: context,
+              applicationName: AppInfo.appName,
+              applicationVersion: AppInfo.appVersion,
+              useRootNavigator: true,
+            ),
           ),
           const HeaderWidget('Developer'),
-          SettingRowWidget("Github", showDivider: true, onPressed: () {
-            Utility.launchURL("https://github.com/TheAlphamerc");
-          }),
-          SettingRowWidget("LinkidIn", showDivider: true, onPressed: () {
-            Utility.launchURL("https://www.linkedin.com/in/thealphamerc/");
-          }),
-          SettingRowWidget("Twitter", showDivider: true, onPressed: () {
-            Utility.launchURL("https://twitter.com/TheAlphaMerc");
-          }),
-          SettingRowWidget("Blog", showDivider: true, onPressed: () {
-            Utility.launchURL("https://dev.to/thealphamerc");
-          }),
+          SettingActionTile(
+            AppInfo.companyName,
+            subtitle: 'About the company and how to contact us',
+            onTap: () => openSettingsPage(context, const CompanyPage()),
+          ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Text(
+              '${AppInfo.appName} version ${AppInfo.appVersion}',
+              style: kSettingSubtitle,
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 }
-
-
