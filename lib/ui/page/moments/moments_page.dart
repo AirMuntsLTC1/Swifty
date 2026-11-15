@@ -4,7 +4,7 @@
 //   1. Story ring row: your Moment (+) first, then people you follow.
 //   2. Trending capsules: swipeable decks built from trending tags.
 //   3. Explore grid: For you (newest) or Trending (most liked).
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 

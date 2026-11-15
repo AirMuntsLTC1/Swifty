@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 

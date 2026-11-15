@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 abstract class WidgetView<T1, T2> extends StatelessWidget {
   const WidgetView(this.state, {Key? key}) : super(key: key);

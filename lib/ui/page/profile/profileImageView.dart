@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
@@ -48,7 +48,7 @@ class ProfileImageView extends StatelessWidget {
                     child: Text(choice.title,
                         style: TextStyles.textStyle14.copyWith(
                           color: choice.isEnable
-                              ? AppColor.secondary.withValues(alpha: .9)
+                              ? AppColor.secondary.withOpacity(.9)
                               : AppColor.lightGrey,
                         )));
               }).toList();
