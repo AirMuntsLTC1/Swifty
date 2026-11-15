@@ -5,39 +5,68 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# A newer push cancels the older build still running for the same branch.
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - uses: actions/checkout@v4
+
+      # Caches Gradle downloads and build cache between runs.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+
+      # Caches the Flutter SDK between runs.
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.3'
           channel: stable
           cache: true
+
+      # Caches downloaded Dart/Flutter packages. Key changes only when pubspec.yaml changes.
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.yaml') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+
       - name: Check Supabase secrets
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
             echo "Missing repository secret: SUPABASE_URL and/or SUPABASE_PUBLISHABLE_KEY"
             exit 1
           fi
+
       - name: Flutter pub get
         run: flutter pub get
-      - name: Build APK
+
+      # Builds only arm64 (modern phones). Output: one small APK.
+      - name: Build arm64 APK
         run: >
           flutter build apk --release
           --target-platform=android-arm64 --split-per-abi
           --dart-define=SUPABASE_URL=$SUPABASE_URL
           --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+
+      - name: Show APK size
+        run: ls -lh build/app/outputs/flutter-apk/*.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: newapp-arm64-release
           path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          retention-days: 7
