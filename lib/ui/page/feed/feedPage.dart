@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -28,7 +30,7 @@ class FeedPage extends StatelessWidget {
       child: customIcon(
         context,
         icon: AppIcon.fabTweet,
-        isTwitterIcon: true,
+        isTwitterIcon: false,
         iconColor: Theme.of(context).colorScheme.onPrimary,
         size: 25,
       ),
@@ -129,14 +131,14 @@ class _FeedPageBody extends StatelessWidget {
         leading: Builder(
           builder: (BuildContext context) {
             return IconButton(
-              icon: const Icon(Icons.menu),
+              icon: const Icon(LucideIcons.menu),
               onPressed: () {
                 scaffoldKey.currentState!.openDrawer();
               },
             );
           },
         ),
-        title: Image.asset('assets/images/icon-480.png', height: 40),
+        title: SwiflyLogo(size: 40),
         centerTitle: true,
         iconTheme: IconThemeData(color: Theme.of(context).primaryColor),
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,

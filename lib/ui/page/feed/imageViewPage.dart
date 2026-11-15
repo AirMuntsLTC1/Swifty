@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/constant.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
@@ -113,7 +114,7 @@ class _ImageViewPgeState extends State<ImageViewPge> {
                             onPressed: () {
                               _submitButton();
                             },
-                            icon: const Icon(Icons.send, color: Colors.white),
+                            icon: const Icon(LucideIcons.send, color: Colors.white),
                           ),
                           focusColor: Colors.black,
                           contentPadding: const EdgeInsets.symmetric(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:flutter_twitter_clone/supabase/screens/auth_widgets.dart';
 import 'package:flutter_twitter_clone/supabase/screens/create_account_page.dart';
@@ -78,7 +79,7 @@ class _SignInPageState extends State<SignInPage> {
                 labelText: 'Password',
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscure ? Icons.visibility_off : Icons.visibility,
+                    _obscure ? LucideIcons.eyeOff : LucideIcons.eye,
                   ),
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),

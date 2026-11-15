@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/ui/page/Auth/signup.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -49,7 +50,7 @@ class _WelcomePageState extends State<WelcomePage> {
             SizedBox(
               width: MediaQuery.of(context).size.width - 80,
               height: 40,
-              child: Image.asset('assets/images/icon-480.png'),
+              child: const SwiflyLogo(size: 96),
             ),
             const Spacer(),
             const TitleText(

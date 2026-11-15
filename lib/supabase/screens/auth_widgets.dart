@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 
 /// Shared layout for the sign-in, sign-up and reset screens.
 class AuthScaffold extends StatelessWidget {
@@ -71,7 +72,7 @@ class AuthPrimaryButton extends StatelessWidget {
             ? const SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(color: SwiflyBrand.blue, strokeWidth: 2),
               )
             : Text(label),
       ),

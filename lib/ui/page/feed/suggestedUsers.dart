@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
 import 'package:flutter_twitter_clone/state/suggestionUserState.dart';
 import 'package:flutter_twitter_clone/state/searchState.dart';
@@ -106,7 +108,7 @@ class _SuggestedUsersState extends State<SuggestedUsers> {
                   slivers: [
                     SliverAppBar(
                       title:
-                          Image.asset('assets/images/icon-480.png', height: 40),
+                          SwiflyLogo(size: 40),
                       backgroundColor:
                           Theme.of(context).appBarTheme.backgroundColor,
                       centerTitle: true,
@@ -156,11 +158,11 @@ class _SuggestedUsersState extends State<SuggestedUsers> {
                                       icon: state.selectedUsersCount ==
                                               state.userlist!.length
                                           ? Icon(
-                                              Icons.check_circle,
+                                              LucideIcons.circleCheck,
                                               color: TwitterColor.dodgeBlue,
                                             )
                                           : Icon(
-                                              Icons.add_circle_outline_outlined,
+                                              LucideIcons.userPlus,
                                               color: Colors.grey,
                                             ),
                                     ),
@@ -209,11 +211,11 @@ class _SuggestedUsersState extends State<SuggestedUsers> {
                                     onPressed: null,
                                     icon: state.isSelected(user)
                                         ? Icon(
-                                            Icons.check_circle,
+                                            LucideIcons.circleCheck,
                                             color: TwitterColor.dodgeBlue,
                                           )
                                         : Icon(
-                                            Icons.add_circle_outline_outlined),
+                                            LucideIcons.userPlus),
                                   ),
                                 );
                               },

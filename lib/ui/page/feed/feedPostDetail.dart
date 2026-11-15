@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
@@ -42,7 +44,7 @@ class _FeedPostDetailState extends State<FeedPostDetail> {
         state.setTweetToReply = state.tweetDetailModel!.last;
         Navigator.of(context).pushNamed('/ComposeTweetPage/' + postId);
       },
-      child: const Icon(Icons.add),
+      child: const Icon(LucideIcons.plus),
     );
   }
 
@@ -84,6 +86,19 @@ class _FeedPostDetailState extends State<FeedPostDetail> {
     if (type == TweetType.Detail) Navigator.of(context).pop();
   }
 
+  Widget _detailArea(FeedState state) {
+    final matches = (state.tweetDetailModel ?? const <FeedModel>[])
+        .where((x) => x.key == postId)
+        .toList();
+    if (matches.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 60),
+        child: Center(child: SwiflyLoader()),
+      );
+    }
+    return _tweetDetail(matches.last);
+  }
+
   @override
   Widget build(BuildContext context) {
     var state = Provider.of<FeedState>(context);
@@ -117,10 +132,7 @@ class _FeedPostDetailState extends State<FeedPostDetail> {
             SliverList(
               delegate: SliverChildListDelegate(
                 [
-                  state.tweetDetailModel == null ||
-                          state.tweetDetailModel!.isEmpty
-                      ? Container()
-                      : _tweetDetail(state.tweetDetailModel!.last),
+                  _detailArea(state),
                   Container(
                     height: 6,
                     width: double.infinity,
@@ -136,11 +148,26 @@ class _FeedPostDetailState extends State<FeedPostDetail> {
                         state.tweetReplyMap![postId] == null
                     ? [
                         //!Removed container
-                        const Center()
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: Center(child: SwiflyLoader()),
+                        )
                       ]
-                    : state.tweetReplyMap![postId]!
-                        .map((x) => _commentRow(x))
-                        .toList(),
+                    : state.tweetReplyMap![postId]!.isEmpty
+                        ? [
+                            const Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Center(
+                                child: Text(
+                                  'No replies yet',
+                                  style: TextStyle(color: Color(0xff657786)),
+                                ),
+                              ),
+                            )
+                          ]
+                        : state.tweetReplyMap![postId]!
+                            .map((x) => _commentRow(x))
+                            .toList(),
               ),
             )
           ],

@@ -36,28 +36,22 @@ class ComposeTweetState extends ChangeNotifier {
 
   /// Runs on every change of the description text.
   void onDescriptionChanged(String text, SearchState searchState) {
+    final wasSubmit = enableSubmitButton;
+    final wasList = displayUserList;
+
     description = text;
     hideUserList = false;
-    if (text.isEmpty || text.length > 280) {
-      enableSubmitButton = false;
-      notifyListeners();
-      return;
-    }
-    enableSubmitButton = true;
-    var last = text.substring(text.length - 1, text.length);
+    enableSubmitButton = text.isNotEmpty && text.length <= 280;
 
-    RegExp regExp = RegExp(usernameRegex);
-    var status = regExp.hasMatch(text);
-    if (status) {
-      Iterable<Match> matches = regExp.allMatches(text);
-      var name = text.substring(matches.last.start, matches.last.end);
-      if (last == "@") {
-        searchState.filterByUsername("");
-      } else {
-        searchState.filterByUsername(name);
-      }
-    } else {
-      hideUserList = false;
+    final regExp = RegExp(usernameRegex);
+    if (text.isNotEmpty && regExp.hasMatch(text)) {
+      final matches = regExp.allMatches(text);
+      final name = text.substring(matches.last.start, matches.last.end);
+      searchState.filterByUsername(text.endsWith('@') ? '' : name);
+    }
+
+    // Notify only when a visible value changes, so typing stays smooth.
+    if (wasSubmit != enableSubmitButton || wasList != displayUserList) {
       notifyListeners();
     }
   }

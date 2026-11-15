@@ -75,7 +75,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   state.userModel!.isVerified ?? false
                       ? customIcon(context,
                           icon: AppIcon.blueTick,
-                          isTwitterIcon: true,
+                          isTwitterIcon: false,
                           iconColor: AppColor.primary,
                           size: 18,
                           paddingIcon: 3)
@@ -206,7 +206,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
               ),
               customIcon(context,
                   icon: AppIcon.bulbOn,
-                  isTwitterIcon: true,
+                  isTwitterIcon: false,
                   size: 25,
                   iconColor: TwitterColor.dodgeBlue),
               const Spacer(),

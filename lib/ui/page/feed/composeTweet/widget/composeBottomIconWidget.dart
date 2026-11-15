@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/widgets/customWidgets.dart';
 import 'package:image_picker/image_picker.dart';
@@ -64,7 +65,7 @@ class _ComposeBottomIconWidgetState extends State<ComposeBottomIconWidget> {
               },
               icon: customIcon(context,
                   icon: AppIcon.image,
-                  isTwitterIcon: true,
+                  isTwitterIcon: false,
                   iconColor: AppColor.primary)),
           IconButton(
               onPressed: () {
@@ -72,7 +73,7 @@ class _ComposeBottomIconWidgetState extends State<ComposeBottomIconWidget> {
               },
               icon: customIcon(context,
                   icon: AppIcon.camera,
-                  isTwitterIcon: true,
+                  isTwitterIcon: false,
                   iconColor: AppColor.primary)),
           Expanded(
               child: Align(
@@ -92,7 +93,7 @@ class _ComposeBottomIconWidgetState extends State<ComposeBottomIconWidget> {
                     : Stack(
                         alignment: Alignment.center,
                         children: <Widget>[
-                          CircularProgressIndicator(
+                          CircularProgressIndicator(color: SwiflyBrand.blue, 
                             value: getTweetLimit(),
                             backgroundColor: Colors.grey,
                             valueColor:

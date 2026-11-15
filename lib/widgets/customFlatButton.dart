@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomFlatButton extends StatelessWidget {
@@ -52,7 +53,7 @@ class CustomFlatButton extends StatelessWidget {
                     height: 22,
                     width: 22,
                     child: FittedBox(
-                      child: CircularProgressIndicator(
+                      child: CircularProgressIndicator(color: SwiflyBrand.blue, 
                         valueColor: AlwaysStoppedAnimation(
                             color ?? Theme.of(context).colorScheme.onPrimary),
                       ),

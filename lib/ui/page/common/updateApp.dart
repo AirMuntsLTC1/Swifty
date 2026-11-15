@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/ui/page/common/splash.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
@@ -48,7 +49,7 @@ class _UpdateAppState extends State<UpdateApp> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Image.asset("assets/images/icon-480.png"),
+            const SwiflyLogo(size: 96),
             const TitleText(
               "New Update is available",
               fontSize: 25,

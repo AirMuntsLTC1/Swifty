@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/chatModel.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -177,7 +178,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               alignLabelWithHint: true,
               hintText: 'Start with a message...',
               suffixIcon: IconButton(
-                  icon: const Icon(Icons.send), onPressed: submitMessage),
+                  icon: const Icon(LucideIcons.send), onPressed: submitMessage),
             ),
           ),
         ],
@@ -255,7 +256,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           backgroundColor: Colors.white,
           actions: <Widget>[
             IconButton(
-                icon: const Icon(Icons.info, color: AppColor.primary),
+                icon: const Icon(LucideIcons.info, color: AppColor.primary),
                 onPressed: () {
                   Navigator.pushNamed(context, '/ConversationInformation');
                 })

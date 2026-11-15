@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
@@ -96,7 +97,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   },
                   icon: customIcon(context,
                       icon: icon!,
-                      isTwitterIcon: true,
+                      isTwitterIcon: false,
                       iconColor: AppColor.primary,
                       size: 25),
                 )
@@ -125,7 +126,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           ? const BackButton()
           : isCrossButton
               ? IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(LucideIcons.x),
                   onPressed: () {
                     Navigator.pop(context);
                   },

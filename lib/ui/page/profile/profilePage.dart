@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
@@ -277,7 +278,7 @@ class _ProfilePageState extends State<ProfilePage>
       child: customIcon(
         context,
         icon: AppIcon.fabTweet,
-        isTwitterIcon: true,
+        isTwitterIcon: false,
         iconColor: Theme.of(context).colorScheme.onPrimary,
         size: 25,
       ),
@@ -540,7 +541,7 @@ class UserNameRowWidget extends StatelessWidget {
               user.isVerified!
                   ? customIcon(context,
                       icon: AppIcon.blueTick,
-                      isTwitterIcon: true,
+                      isTwitterIcon: false,
                       iconColor: AppColor.primary,
                       size: 13,
                       paddingIcon: 3)
@@ -569,7 +570,7 @@ class UserNameRowWidget extends StatelessWidget {
               customIcon(context,
                   icon: AppIcon.locationPin,
                   size: 14,
-                  isTwitterIcon: true,
+                  isTwitterIcon: false,
                   paddingIcon: 5,
                   iconColor: AppColor.darkGrey),
               const SizedBox(width: 10),
@@ -589,7 +590,7 @@ class UserNameRowWidget extends StatelessWidget {
               customIcon(context,
                   icon: AppIcon.calender,
                   size: 14,
-                  isTwitterIcon: true,
+                  isTwitterIcon: false,
                   paddingIcon: 5,
                   iconColor: AppColor.darkGrey),
               const SizedBox(width: 10),
@@ -646,9 +647,9 @@ class Choice {
 }
 
 const List<Choice> choices = <Choice>[
-  Choice(title: 'Share', icon: Icons.directions_car, isEnable: true),
-  Choice(title: 'QR code', icon: Icons.directions_railway, isEnable: true),
-  Choice(title: 'Draft', icon: Icons.directions_bike),
-  Choice(title: 'View Lists', icon: Icons.directions_boat),
-  Choice(title: 'View Moments', icon: Icons.directions_bus),
+  Choice(title: 'Share', icon: LucideIcons.share2, isEnable: true),
+  Choice(title: 'QR code', icon: LucideIcons.qrCode, isEnable: true),
+  Choice(title: 'Draft', icon: LucideIcons.fileText),
+  Choice(title: 'View Lists', icon: LucideIcons.list),
+  Choice(title: 'View Moments', icon: LucideIcons.zap),
 ];

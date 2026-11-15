@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 part 'app_icons.dart';
 part 'color/light_color.dart';
 part 'text_styles.dart';

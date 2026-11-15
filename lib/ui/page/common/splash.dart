@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -121,14 +122,10 @@ class _SplashPageState extends State<SplashPage> {
                   ? const CupertinoActivityIndicator(
                       radius: 35,
                     )
-                  : const CircularProgressIndicator(
+                  : const CircularProgressIndicator(color: SwiflyBrand.blue, 
                       strokeWidth: 2,
                     ),
-              Image.asset(
-                'assets/images/icon-480.png',
-                height: 30,
-                width: 30,
-              )
+              SwiflyLogo(size: 30)
             ],
           ),
         ),

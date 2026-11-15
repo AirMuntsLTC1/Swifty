@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
@@ -77,7 +78,7 @@ class TweetIconsRow extends StatelessWidget {
                     : iconColor,
             size: size ?? 20,
           ),
-          _iconWidget(context, text: '', icon: null, sysIcon: Icons.share,
+          _iconWidget(context, text: '', icon: null, sysIcon: LucideIcons.share2,
               onPressed: () {
             shareTweet(context);
           }, iconColor: iconColor, size: size ?? 20),
@@ -109,7 +110,7 @@ class TweetIconsRow extends StatelessWidget {
                     context,
                     size: size,
                     icon: icon!,
-                    isTwitterIcon: true,
+                    isTwitterIcon: false,
                     iconColor: iconColor,
                   ),
           ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -128,7 +129,7 @@ class _ScanState extends State<ScanScreen> with SingleTickerProviderStateMixin {
                               }
                             },
                             icon: Icon(
-                              Icons.share_outlined,
+                              LucideIcons.share2,
                               color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),

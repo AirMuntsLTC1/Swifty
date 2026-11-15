@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/profilePage.dart';
@@ -16,12 +17,12 @@ class ProfileImageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const List<Choice> choices = <Choice>[
-      Choice(title: 'Share image link', icon: Icons.share, isEnable: true),
+      Choice(title: 'Share image link', icon: LucideIcons.share2, isEnable: true),
       Choice(
           title: 'Open in browser',
-          icon: Icons.open_in_browser,
+          icon: LucideIcons.externalLink,
           isEnable: true),
-      Choice(title: 'Save', icon: Icons.save),
+      Choice(title: 'Save', icon: LucideIcons.download),
     ];
     return Scaffold(
       backgroundColor: TwitterColor.white,

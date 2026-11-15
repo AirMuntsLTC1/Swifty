@@ -24,7 +24,7 @@ class TweetBottomSheet {
       ),
       child: customIcon(context,
           icon: AppIcon.arrowDown,
-          isTwitterIcon: true,
+          isTwitterIcon: false,
           iconColor: AppColor.lightGrey),
     ).ripple(
       () {
@@ -337,7 +337,7 @@ class TweetBottomSheet {
             customIcon(
               context,
               icon: icon,
-              isTwitterIcon: true,
+              isTwitterIcon: false,
               size: 25,
               paddingIcon: 8,
               iconColor:

@@ -177,10 +177,7 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
     var tags = Utility.getHashTags(_textEditingController.text);
     FeedModel reply = FeedModel(
         description: _textEditingController.text,
-        lanCode:
-            (await GoogleTranslator().translate(_textEditingController.text))
-                .sourceLanguage
-                .code,
+        lanCode: null,
         user: commentedUser,
         createdAt: DateTime.now().toUtc().toString(),
         tags: tags,
@@ -211,9 +208,9 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
                 ? 'Retweet'
                 : 'Reply',
         isSubmitDisable:
-            !Provider.of<ComposeTweetState>(context).enableSubmitButton ||
-                Provider.of<FeedState>(context).isBusy,
-        isBottomLine: Provider.of<ComposeTweetState>(context).isScrollingDown,
+            !context.select<ComposeTweetState, bool>((s) => s.enableSubmitButton) ||
+                context.select<FeedState, bool>((s) => s.isBusy),
+        isBottomLine: context.select<ComposeTweetState, bool>((s) => s.isScrollingDown),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
@@ -277,7 +274,7 @@ class _ComposeRetweet
                       ? customIcon(
                           context,
                           icon: AppIcon.blueTick,
-                          isTwitterIcon: true,
+                          isTwitterIcon: false,
                           iconColor: AppColor.primary,
                           size: 13,
                           paddingIcon: 3,
@@ -458,7 +455,7 @@ class _ComposeTweet
                     ? customIcon(
                         context,
                         icon: AppIcon.blueTick,
-                        isTwitterIcon: true,
+                        isTwitterIcon: false,
                         iconColor: AppColor.primary,
                         size: 13,
                         paddingIcon: 3,
@@ -575,7 +572,7 @@ class _UserList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return !Provider.of<ComposeTweetState>(context).displayUserList ||
+    return !context.select<ComposeTweetState, bool>((s) => s.displayUserList) ||
             list == null ||
             list!.length < 0 ||
             list!.isEmpty
@@ -636,7 +633,7 @@ class _UserTile extends StatelessWidget {
               ? customIcon(
                   context,
                   icon: AppIcon.blueTick,
-                  isTwitterIcon: true,
+                  isTwitterIcon: false,
                   iconColor: AppColor.primary,
                   size: 13,
                   paddingIcon: 3,

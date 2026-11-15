@@ -220,7 +220,7 @@ class _TweetBody extends StatelessWidget {
                             ? customIcon(
                                 context,
                                 icon: AppIcon.blueTick,
-                                isTwitterIcon: true,
+                                isTwitterIcon: false,
                                 iconColor: AppColor.primary,
                                 size: 13,
                                 paddingIcon: 3,
@@ -349,7 +349,7 @@ class _TweetDetailBody extends StatelessWidget {
                         ? customIcon(
                             context,
                             icon: AppIcon.blueTick,
-                            isTwitterIcon: true,
+                            isTwitterIcon: false,
                             iconColor: AppColor.primary,
                             size: 13,
                             paddingIcon: 3,

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 
 class ComposeTweetImage extends StatelessWidget {
@@ -41,7 +42,7 @@ class ComposeTweetImage extends StatelessWidget {
                       iconSize: 20,
                       onPressed: onCrossIconPressed,
                       icon: Icon(
-                        Icons.close,
+                        LucideIcons.x,
                         color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -108,7 +109,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           child: Center(
             child: IconButton(
               onPressed: uploadImage,
-              icon: const Icon(Icons.camera_alt, color: Colors.white),
+              icon: const Icon(LucideIcons.camera, color: Colors.white),
             ),
           ),
         ),
@@ -147,7 +148,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     color: Colors.black38),
                 child: IconButton(
                   onPressed: uploadBanner,
-                  icon: const Icon(Icons.camera_alt, color: Colors.white),
+                  icon: const Icon(LucideIcons.camera, color: Colors.white),
                 ),
               ),
             ),

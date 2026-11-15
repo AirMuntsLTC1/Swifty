@@ -145,7 +145,7 @@ class _ChatListPageState extends State<ChatListPage> {
       child: customIcon(
         context,
         icon: AppIcon.newMessage,
-        isTwitterIcon: true,
+        isTwitterIcon: false,
         iconColor: Theme.of(context).colorScheme.onPrimary,
         size: 25,
       ),

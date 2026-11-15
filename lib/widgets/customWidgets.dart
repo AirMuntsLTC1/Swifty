@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 
 Widget customTitleText(String? title, {BuildContext? context}) {
@@ -21,7 +22,7 @@ Widget customIcon(
   required IconData icon,
   bool isEnable = false,
   double size = 18,
-  bool isTwitterIcon = true,
+  bool isTwitterIcon = false,
   bool isFontAwesomeSolid = false,
   Color? iconColor,
   double paddingIcon = 10,
@@ -73,15 +74,5 @@ Widget customText(
 }
 
 Widget loader() {
-  if (Platform.isIOS) {
-    return const Center(
-      child: CupertinoActivityIndicator(),
-    );
-  } else {
-    return const Center(
-      child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-      ),
-    );
-  }
+  return const Center(child: SwiflyLoader());
 }

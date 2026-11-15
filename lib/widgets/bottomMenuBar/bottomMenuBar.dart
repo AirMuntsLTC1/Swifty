@@ -87,7 +87,7 @@ class _BottomMenubarState extends State<BottomMenubar> {
                   ? customIcon(context,
                       icon: icon!,
                       size: 22,
-                      isTwitterIcon: true,
+                      isTwitterIcon: false,
                       isEnable: index == state.pageIndex)
                   : Icon(
                       iconData,
