@@ -8,6 +8,9 @@ import 'package:flutter_twitter_clone/state/searchState.dart';
 import 'package:flutter_twitter_clone/ui/page/common/locator.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 
+import 'package:flutter_twitter_clone/supabase/screens/auth_gate.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_auth_service.dart';
+
 import 'helper/routes.dart';
 import 'state/appState.dart';
 import 'state/authState.dart';
@@ -17,7 +20,12 @@ import 'state/notificationState.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await SupabaseAuthService.initialize();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase init skipped: $e');
+  }
   setupDependencies();
   runApp(const MyApp());
 }
@@ -50,7 +58,7 @@ class MyApp extends StatelessWidget {
         routes: Routes.route(),
         onGenerateRoute: (settings) => Routes.onGenerateRoute(settings),
         onUnknownRoute: (settings) => Routes.onUnknownRoute(settings),
-        initialRoute: "SplashPage",
+        home: const SupabaseAuthGate(),
       ),
     );
   }
