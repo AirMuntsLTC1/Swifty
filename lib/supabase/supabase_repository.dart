@@ -345,6 +345,8 @@ class SupabaseRepository {
     }).toList();
   }
 
+  /// Creates the post and its photo in one database transaction
+  /// (swifs_create_post). Either both are saved or neither is.
   Future<String> createPost({
     required String text,
     List<String> tags = const [],
@@ -353,26 +355,14 @@ class SupabaseRepository {
   }) async {
     final me = uid;
     if (me == null) throw StateError('Not signed in');
-    final row = await db
-        .from('posts')
-        .insert({
-          'author_id': me,
-          'text': text,
-          'audience': audience,
-          'tagged_handles': tags,
-        })
-        .select('id')
-        .single();
-    final postId = row['id'].toString();
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      await db.from('post_media').insert({
-        'post_id': postId,
-        'position': 0,
-        'kind': 'image',
-        'storage_path': imageUrl,
-      });
-    }
-    return postId;
+    final id = await db.rpc('swifs_create_post', params: {
+      'p_text': text,
+      'p_audience': audience,
+      'p_tags': tags,
+      'p_image_url':
+          (imageUrl != null && imageUrl.isNotEmpty) ? imageUrl : null,
+    });
+    return id.toString();
   }
 
   Future<void> updatePostText(String postId, String text) async {

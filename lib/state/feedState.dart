@@ -185,9 +185,13 @@ class FeedState extends AppState {
     return _repo.fetchPost(postID);
   }
 
+  /// Reason the last post failed, shown to the user in the composer.
+  String? lastPostError;
+
   /// Create a new post. Returns the post id, or null when the post was not saved.
   Future<String?> createTweet(FeedModel model) async {
     isBusy = true;
+    lastPostError = null;
     notifyListeners();
     String? tweetKey;
     try {
@@ -210,6 +214,7 @@ class FeedState extends AppState {
       if (created != null) _insertIntoFeed(created);
     } catch (error) {
       cprint(error, errorIn: 'createTweet');
+      lastPostError = error.toString();
     } finally {
       isBusy = false;
       notifyListeners();
@@ -425,5 +430,7 @@ class FeedState extends AppState {
     _refreshPost(postId);
   }
 }
+
+
 
 

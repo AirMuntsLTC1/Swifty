@@ -118,7 +118,10 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
       }
 
       if (tweetId == null) {
-        _showSubmitError('Could not post. Please try again.');
+        final reason = state.lastPostError;
+        _showSubmitError(reason == null
+            ? 'Could not post. Please try again.'
+            : 'Could not post: $reason');
         return;
       }
       tweetModel.key = tweetId;
@@ -635,5 +638,7 @@ class _UserTile extends StatelessWidget {
     );
   }
 }
+
+
 
 
