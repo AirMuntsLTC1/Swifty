@@ -10,6 +10,8 @@ class AdCampaign {
     required this.headline,
     this.body,
     this.imageUrl,
+    this.videoUrl,
+    this.format = 'image',
     this.ctaLabel = 'Learn more',
     required this.ctaUrl,
   });
@@ -21,7 +23,13 @@ class AdCampaign {
   final bool advertiserVerified;
   final String headline;
   final String? body;
+
+  /// Still image. For video ads this is the poster shown before playback.
   final String? imageUrl;
+  final String? videoUrl;
+
+  /// 'image', 'card' or 'video'.
+  final String format;
   final String ctaLabel;
   final String ctaUrl;
 
@@ -35,6 +43,8 @@ class AdCampaign {
       headline: (row['headline'] ?? '').toString(),
       body: row['body']?.toString(),
       imageUrl: row['image_url']?.toString(),
+      videoUrl: row['video_url']?.toString(),
+      format: (row['format'] ?? 'image').toString(),
       ctaLabel: (row['cta_label'] ?? 'Learn more').toString(),
       ctaUrl: (row['cta_url'] ?? '').toString(),
     );

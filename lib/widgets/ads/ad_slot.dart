@@ -1,24 +1,30 @@
 // lib/widgets/ads/ad_slot.dart
 //
-// One ad position in the home feed. Shows the ad at its position if an active
-// campaign exists; otherwise shows nothing (no placeholder ads).
+// Ad positions in the home feed. Each slot shows, in order:
+//   1. an in-house campaign (image, card or video) if one is active, or
+//   2. a Google AdMob native ad if AdMob is enabled, or
+//   3. nothing.
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
+
+import 'package:flutter_twitter_clone/config/ads_config.dart';
+import 'package:flutter_twitter_clone/helper/open_link.dart';
 import 'package:flutter_twitter_clone/model/ad_campaign.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_ads.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
-import 'package:flutter_twitter_clone/helper/open_link.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
+import 'package:flutter_twitter_clone/widgets/ads/admob_native_slot.dart';
 import 'package:flutter_twitter_clone/widgets/newWidget/title_text.dart';
 import 'package:flutter_twitter_clone/widgets/verified_badge.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 
 /// Every this many feed posts, one ad slot is inserted.
 const int kAdEvery = 6;
 
-/// Short-lived cache so each ad slot does not call the server again.
+/// Short-lived cache so ad slots do not call the server again on every build.
 class AdsCache {
   AdsCache._();
   static final AdsCache instance = AdsCache._();
@@ -28,8 +34,8 @@ class AdsCache {
   DateTime? _loadedAt;
 
   Future<List<AdCampaign>> load() async {
-    final fresh = _loadedAt != null &&
-        DateTime.now().difference(_loadedAt!) < _ttl;
+    final fresh =
+        _loadedAt != null && DateTime.now().difference(_loadedAt!) < _ttl;
     if (_ads != null && fresh) return _ads!;
     _ads = await SupabaseRepository.instance.fetchActiveAds(limit: 10);
     _loadedAt = DateTime.now();
@@ -53,6 +59,8 @@ class AdSlot extends StatefulWidget {
 
 class _AdSlotState extends State<AdSlot> {
   AdCampaign? _ad;
+  bool _useAdMob = false;
+  bool _loaded = false;
 
   @override
   void initState() {
@@ -64,25 +72,39 @@ class _AdSlotState extends State<AdSlot> {
     try {
       final ads = await AdsCache.instance.load();
       if (!mounted) return;
-      // One real campaign per slot, never repeated, so a single ad does not
-      // fill the whole feed.
+      // Each in-house campaign appears once, in its own slot.
+      final inHouse = widget.slotIndex < ads.length ? ads[widget.slotIndex] : null;
       setState(() {
-        _ad = widget.slotIndex < ads.length ? ads[widget.slotIndex] : null;
+        _ad = inHouse;
+        _useAdMob = inHouse == null && kAdMobEnabled;
+        _loaded = true;
       });
     } catch (error) {
       debugPrint('Ads failed to load: $error');
+      if (mounted) setState(() => _loaded = true);
     }
+  }
+
+  void _onHidden() {
+    setState(() {
+      _ad = null;
+      _useAdMob = kAdMobEnabled;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
     final ad = _ad;
-    if (ad == null) return const SizedBox.shrink();
-    return AdCard(
-      key: ValueKey('ad-${ad.id}'),
-      ad: ad,
-      onHidden: () => setState(() => _ad = null),
-    );
+    if (ad != null) {
+      return AdCard(
+        key: ValueKey('ad-${ad.id}'),
+        ad: ad,
+        onHidden: _onHidden,
+      );
+    }
+    if (_useAdMob) return const AdMobNativeSlot();
+    return const SizedBox.shrink();
   }
 }
 
@@ -144,11 +166,36 @@ class _AdCardState extends State<AdCard> {
     );
   }
 
+  String _domainOf(String url) => Uri.tryParse(url)?.host ?? '';
+
+  Widget _media(AdCampaign ad) {
+    if (ad.format == 'video' && ad.videoUrl != null && ad.videoUrl!.isNotEmpty) {
+      return AdVideo(url: ad.videoUrl!, posterUrl: ad.imageUrl);
+    }
+    if (ad.imageUrl == null || ad.imageUrl!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return GestureDetector(
+      onTap: _click,
+      child: AspectRatio(
+        aspectRatio: 1.91,
+        child: CachedNetworkImage(
+          imageUrl: ad.imageUrl!,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(color: AppColor.extraLightGrey),
+          errorWidget: (_, __, ___) => Container(color: AppColor.extraLightGrey),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ad = widget.ad;
     final hasBody = ad.body != null && ad.body!.trim().isNotEmpty;
-    final hasImage = ad.imageUrl != null && ad.imageUrl!.isNotEmpty;
+    final subtitle =
+        ad.format == 'card' ? _domainOf(ad.ctaUrl) : ad.advertiserHandle;
+
     return VisibilityDetector(
       key: Key('ad-visibility-${ad.id}'),
       onVisibilityChanged: _onVisibilityChanged,
@@ -157,110 +204,87 @@ class _AdCardState extends State<AdCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircularImage(path: ad.advertiserAvatarUrl, height: 40),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: TitleText(
-                              ad.advertiserName,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              overflow: TextOverflow.ellipsis,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 4, 0),
+              child: Row(
+                children: [
+                  CircularImage(path: ad.advertiserAvatarUrl, height: 40),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: TitleText(
+                                ad.advertiserName,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                          if (ad.advertiserVerified) ...[
-                            const SizedBox(width: 4),
-                            const VerifiedBadge(size: 14),
+                            if (ad.advertiserVerified) ...[
+                              const SizedBox(width: 4),
+                              const VerifiedBadge(size: 14),
+                            ],
                           ],
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          const Text(
-                            'Ad',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColor.darkGrey,
-                              fontWeight: FontWeight.w700,
+                        ),
+                        Row(
+                          children: const [
+                            Text(
+                              'Ad',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColor.darkGrey,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Text('·',
-                              style: TextStyle(color: AppColor.darkGrey)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.public,
-                              size: 14, color: AppColor.darkGrey),
-                        ],
-                      ),
+                            SizedBox(width: 4),
+                            Text('·',
+                                style: TextStyle(color: AppColor.darkGrey)),
+                            SizedBox(width: 4),
+                            Icon(Icons.public,
+                                size: 14, color: AppColor.darkGrey),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_horiz, color: AppColor.darkGrey),
+                    onSelected: (value) {
+                      if (value == 'hide') _hide();
+                      if (value == 'why') _whyThisAd();
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'hide', child: Text('Hide ad')),
+                      PopupMenuItem(
+                          value: 'why', child: Text('Why am I seeing this?')),
                     ],
                   ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_horiz, color: AppColor.darkGrey),
-                  onSelected: (value) {
-                    if (value == 'hide') _hide();
-                    if (value == 'why') _whyThisAd();
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'hide', child: Text('Hide ad')),
-                    PopupMenuItem(
-                        value: 'why', child: Text('Why am I seeing this?')),
-                  ],
-                ),
-                IconButton(
-                  tooltip: 'Hide ad',
-                  icon: const Icon(LucideIcons.x, color: AppColor.darkGrey),
-                  onPressed: _hide,
-                ),
-              ],
+                  IconButton(
+                    tooltip: 'Hide ad',
+                    icon: const Icon(LucideIcons.x, color: AppColor.darkGrey),
+                    onPressed: _hide,
+                  ),
+                ],
+              ),
             ),
-            if (hasBody) ...[
-              const SizedBox(height: 10),
+            if (hasBody)
               Padding(
-                padding: const EdgeInsets.only(right: 10),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                 child: Text(
                   ad.body!,
                   style: const TextStyle(fontSize: 15, height: 1.4),
                 ),
               ),
-            ],
-            if (hasImage) ...[
-              const SizedBox(height: 10),
-              GestureDetector(
-                onTap: _click,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: AspectRatio(
-                    aspectRatio: 1.91,
-                    child: CachedNetworkImage(
-                      imageUrl: ad.imageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) =>
-                          Container(color: AppColor.extraLightGrey),
-                      errorWidget: (_, __, ___) =>
-                          Container(color: AppColor.extraLightGrey),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-          ),
-          if (ad.ctaUrl.isNotEmpty)
-            AdCtaBar(ad: ad, onPressed: _click),
+            _media(ad),
+            AdCtaBar(
+              ad: ad,
+              subtitle: subtitle,
+              onPressed: _click,
+            ),
           ],
         ),
       ),
@@ -268,11 +292,130 @@ class _AdCardState extends State<AdCard> {
   }
 }
 
-/// Headline and call-to-action button under the ad image.
+/// Plays a video ad muted, only while at least 60% of it is on screen.
+/// Tap the speaker icon to turn sound on or off.
+class AdVideo extends StatefulWidget {
+  const AdVideo({super.key, required this.url, this.posterUrl});
+
+  final String url;
+  final String? posterUrl;
+
+  @override
+  State<AdVideo> createState() => _AdVideoState();
+}
+
+class _AdVideoState extends State<AdVideo> {
+  VideoPlayerController? _controller;
+  bool _ready = false;
+  bool _muted = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    _controller = controller;
+    controller
+      ..setLooping(true)
+      ..setVolume(0)
+      ..initialize().then((_) {
+        if (mounted) setState(() => _ready = true);
+      }).catchError((Object error) {
+        debugPrint('Ad video failed: $error');
+      });
+  }
+
+  void _onVisibilityChanged(VisibilityInfo info) {
+    final controller = _controller;
+    if (controller == null || !_ready) return;
+    if (info.visibleFraction >= 0.6) {
+      controller.play();
+    } else {
+      controller.pause();
+    }
+  }
+
+  void _toggleSound() {
+    final controller = _controller;
+    if (controller == null) return;
+    setState(() {
+      _muted = !_muted;
+      controller.setVolume(_muted ? 0 : 1);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    return VisibilityDetector(
+      key: Key('ad-video-${widget.url}'),
+      onVisibilityChanged: _onVisibilityChanged,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (widget.posterUrl != null && widget.posterUrl!.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: widget.posterUrl!,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(color: Colors.black),
+                errorWidget: (_, __, ___) => Container(color: Colors.black),
+              )
+            else
+              Container(color: Colors.black),
+            if (_ready && controller != null)
+              FittedBox(
+                fit: BoxFit.cover,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: controller.value.size.width,
+                  height: controller.value.size.height,
+                  child: VideoPlayer(controller),
+                ),
+              ),
+            Positioned(
+              right: 8,
+              bottom: 8,
+              child: GestureDetector(
+                onTap: _toggleSound,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _muted ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Headline, subtitle and call-to-action button at the bottom of an ad.
 class AdCtaBar extends StatelessWidget {
-  const AdCtaBar({super.key, required this.ad, required this.onPressed});
+  const AdCtaBar({
+    super.key,
+    required this.ad,
+    required this.subtitle,
+    required this.onPressed,
+  });
 
   final AdCampaign ad;
+  final String subtitle;
   final VoidCallback onPressed;
 
   @override
@@ -292,11 +435,13 @@ class AdCtaBar extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  ad.advertiserHandle,
-                  style: const TextStyle(fontSize: 13, color: AppColor.darkGrey),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (subtitle.isNotEmpty)
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppColor.darkGrey),
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),
