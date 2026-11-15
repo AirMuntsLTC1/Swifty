@@ -2,7 +2,9 @@
 // Older plugins (e.g. qr_code_scanner) have no namespace, which AGP 8 requires.
 subprojects {
     afterEvaluate { proj ->
-        proj.tasks.matching { it.name.contains('Kotlin') }.configureEach { it.kotlinOptions.jvmTarget = '17' }
+        proj.tasks.matching { it.name.startsWith('compile') && it.name.contains('Kotlin') }.configureEach {
+            if (it.hasProperty('kotlinOptions')) { it.kotlinOptions.jvmTarget = '17' }
+        }
         def ext = proj.extensions.findByName('android')
         if (ext != null) {
             ext.compileSdk = 35
