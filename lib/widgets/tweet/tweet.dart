@@ -206,7 +206,7 @@ class _TweetBody extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(
                     children: <Widget>[
-                      Icon(AppIcon.retweet, size: 14, color: AppColor.paleSky),
+                      Icon(AppIcon.retweet, size: 14, color: TwitterColor.paleSky),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -216,7 +216,7 @@ class _TweetBody extends StatelessWidget {
                               : '${(model.repostedByName ?? '').isNotEmpty ? model.repostedByName : 'Someone'} retweeted',
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColor.paleSky,
+                            color: TwitterColor.paleSky,
                             fontWeight: FontWeight.w600,
                           ),
                           overflow: TextOverflow.ellipsis,

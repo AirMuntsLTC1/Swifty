@@ -72,7 +72,7 @@ class _ImageViewPgeState extends State<ImageViewPge> {
       color: Colors.black54,
       shape: const CircleBorder(),
       child: IconButton(
-        icon: const Icon(LucideIcons.arrowLeft, color: Colors.white),
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () => Navigator.maybePop(context),
       ),
     );
@@ -184,3 +184,5 @@ class _ImageViewPgeState extends State<ImageViewPge> {
     );
   }
 }
+
+
