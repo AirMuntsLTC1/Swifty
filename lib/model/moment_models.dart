@@ -59,6 +59,7 @@ class MomentStory {
     required this.expiresAt,
     this.mediaUrl,
     this.mediaType = 'image',
+    this.thumbnailUrl,
     this.text,
     this.bgColor,
     this.place,
@@ -76,6 +77,9 @@ class MomentStory {
 
   /// 'image', 'video', or 'text' (no media).
   final String mediaType;
+
+  /// Still image of a video story, shown until the video starts.
+  final String? thumbnailUrl;
   final String? text;
   final int? bgColor;
   final String? place;
@@ -111,6 +115,9 @@ class MomentStory {
       expiresAt: DateTime.parse(row['expires_at'].toString()).toLocal(),
       mediaUrl: photo.isEmpty ? null : resolveUrl(photo),
       mediaType: (row['media_type'] ?? 'image').toString(),
+      thumbnailUrl: (row['thumbnail_url'] ?? '').toString().isEmpty
+          ? null
+          : row['thumbnail_url'].toString(),
       text: text,
       bgColor: (row['bg_color'] as num?)?.toInt(),
       place: place.isEmpty ? null : place,

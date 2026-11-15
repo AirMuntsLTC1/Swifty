@@ -195,9 +195,10 @@ class _PostSlide extends StatelessWidget {
                 ? Center(
                     child: PostVideoPlayer(
                       url: image,
+                      thumbnailUrl: post.thumbnailUrl,
                       aspectRatio: 9 / 16,
                       borderRadius: 0,
-                      autoPlay: true,
+                      autoPlayWhenVisible: true,
                     ),
                   )
                 : CacheImage(path: image, fit: BoxFit.cover),

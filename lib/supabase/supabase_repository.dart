@@ -425,11 +425,14 @@ class SupabaseRepository {
 
     final media = <String, String>{};
     final mediaKinds = <String, String>{};
+    final thumbs = <String, String>{};
     for (final m in (results[1] as List)) {
       final postId = m['post_id'].toString();
       if (!media.containsKey(postId)) {
         media[postId] = mediaUrl(m['storage_path'].toString());
         mediaKinds[postId] = (m['kind'] ?? 'image').toString();
+        final thumb = (m['thumbnail_url'] ?? '').toString();
+        if (thumb.isNotEmpty) thumbs[postId] = thumb;
       }
     }
 
@@ -470,6 +473,7 @@ class SupabaseRepository {
         createdAt: row['created_at'].toString(),
         imagePath: media[id],
         mediaKind: mediaKinds[id],
+        thumbnailUrl: thumbs[id],
         tags: List<String>.from((row['tagged_handles'] as List?) ?? const []),
         user: profiles[authorId] ?? fallbackUser(authorId),
         listId: (row['list_id'] ?? '').toString().isEmpty
@@ -490,6 +494,7 @@ class SupabaseRepository {
     String audience = 'everyone',
     String? listId,
     String mediaKind = 'image',
+    String? thumbnailUrl,
   }) async {
     return _run('createPost', () async {
     final me = uid;
@@ -502,6 +507,7 @@ class SupabaseRepository {
           (imageUrl != null && imageUrl.isNotEmpty) ? imageUrl : null,
       'p_list_id': listId,
       'p_media_kind': mediaKind,
+      'p_thumbnail_url': thumbnailUrl,
     });
     return id.toString();
   });

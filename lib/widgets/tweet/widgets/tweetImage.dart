@@ -21,8 +21,9 @@ class TweetImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (model.imagePath != null) assert(type != null);
     if (model.imagePath != null && model.mediaKind == 'video') {
-      // Videos play inline. Tapping the video plays or pauses it, so it does
-      // not open the post; tap the text or the empty space to open the post.
+      // In the feed a tap opens the thread, like a photo does. Inside a thread
+      // (and on replies) a tap pauses or plays the video instead.
+      final opensThread = type == TweetType.Tweet;
       return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Align(
@@ -31,7 +32,10 @@ class TweetImage extends StatelessWidget {
             width: context.width * (type == TweetType.Detail ? .95 : .8) - 8,
             child: PostVideoPlayer(
               url: model.imagePath,
+              thumbnailUrl: model.thumbnailUrl,
               borderRadius: isRetweetImage ? 0 : 20,
+              autoPlayWhenVisible: true,
+              onTap: opensThread ? () => _openThread(context) : null,
             ),
           ),
         ),
@@ -95,12 +99,12 @@ class TweetImage extends StatelessWidget {
             ),
     );
   }
+
+  /// Same as tapping a post: open its thread.
+  void _openThread(BuildContext context) {
+    final state = Provider.of<FeedState>(context, listen: false);
+    state.clearAllDetailAndReplyTweetStack();
+    state.getPostDetailFromDatabase(null, model: model);
+    Navigator.push(context, FeedPostDetail.getRoute(model.key!));
+  }
 }
-
-
-
-
-
-
-
-

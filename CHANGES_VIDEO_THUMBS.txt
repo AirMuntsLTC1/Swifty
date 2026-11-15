@@ -1,0 +1,26 @@
+CHANGES: video thumbnails, autoplay, thread tap, pause on scroll
+=================================================================
+
+RUN FIRST (Supabase, after 20261203000000_swifs_post_video.sql):
+  supabase/migrations/20261204000000_swifs_video_thumbs.sql
+  Adds thumbnail_url to post_media and stories, and a new post function.
+  Posts fail until this is run.
+
+pubspec.yaml: added video_thumbnail, visibility_detector, path_provider.
+  Run flutter pub get.
+
+NEW
+  lib/helper/video_thumbnail_helper.dart     makes a JPEG from a video's first frame
+  lib/widgets/video/post_video_player.dart   rewritten player
+
+BEHAVIOUR
+  - Thumbnail is shown at once; no black box. Stored per post and per story.
+  - Feed and threads: plays by itself, muted, while 60%+ is on screen.
+    Pauses when scrolled away and releases the decoder.
+  - Only one video plays at a time.
+  - Feed: tap a video to open its thread (like a photo).
+  - Thread: tap pauses or plays. Speaker button mutes or unmutes.
+  - Explore grid and capsule covers show the video's thumbnail.
+
+Older videos posted before this update have no thumbnail. They show a grey
+placeholder, then the first frame when they play.

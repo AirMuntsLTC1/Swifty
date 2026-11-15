@@ -209,6 +209,7 @@ class FeedState extends AppState {
         imageUrl: model.imagePath,
         listId: listId,
         mediaKind: model.mediaKind ?? 'image',
+        thumbnailUrl: model.thumbnailUrl,
       );
       tweetKey = newId;
       // Read the row back (with author and media) so it appears at once.

@@ -455,10 +455,11 @@ class _StoryBody extends StatelessWidget {
           Center(
             child: PostVideoPlayer(
               url: url,
-              aspectRatio: 9 / 16,
+              thumbnailUrl: story.thumbnailUrl,
+              aspectRatio: MediaQuery.of(context).size.aspectRatio,
               borderRadius: 0,
               fit: BoxFit.cover,
-              autoPlay: true,
+              autoPlayWhenVisible: true,
               startMuted: false,
             ),
           ),

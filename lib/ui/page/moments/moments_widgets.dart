@@ -216,10 +216,12 @@ class CapsuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use the first photo as the cover. Videos are not used as images.
-    final photos = capsule.posts.where(
-        (p) => p.imagePath != null && p.imagePath!.isNotEmpty && p.mediaKind != 'video');
-    final String? cover = photos.isEmpty ? null : photos.first.imagePath;
+    // The first post with a picture (a video counts with its thumbnail).
+    final posters = capsule.posts.where((p) {
+      final poster = p.posterUrl;
+      return poster != null && poster.isNotEmpty;
+    });
+    final String? cover = posters.isEmpty ? null : posters.first.posterUrl;
 
     return GestureDetector(
       onTap: onTap,
@@ -283,33 +285,42 @@ class MomentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = post.imagePath;
-    final hasImage = image != null && image.isNotEmpty;
+    final poster = post.posterUrl;
+    final hasPoster = poster != null && poster.isNotEmpty;
+    final isVideo = post.mediaKind == 'video';
     final text = (post.description ?? '').trim();
 
     return GestureDetector(
       onTap: onTap,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          color: hasImage ? Colors.black : momentColorFor(post.key ?? text),
-          child: hasImage
-              ? post.mediaKind == 'video'
-                  ? const _VideoTileCover()
-                  : CacheImage(path: image, fit: BoxFit.cover)
-              : Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Center(
-                    child: Text(
-                      text,
-                      maxLines: 6,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: momentTitle(size: 14, color: Colors.white),
+        child: hasPoster
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  CacheImage(path: poster, fit: BoxFit.cover),
+                  if (isVideo)
+                    const Center(
+                      child: Icon(Icons.play_circle_fill_rounded,
+                          color: Colors.white70, size: 44),
+                    ),
+                ],
+              )
+            : isVideo
+                ? const _VideoTileCover()
+                : Container(
+                    color: momentColorFor(post.key ?? text),
+                    padding: const EdgeInsets.all(12),
+                    child: Center(
+                      child: Text(
+                        text,
+                        maxLines: 6,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: momentTitle(size: 14, color: Colors.white),
+                      ),
                     ),
                   ),
-                ),
-        ),
       ),
     );
   }
@@ -486,7 +497,7 @@ class _VideoTileCover extends StatelessWidget {
     return const Stack(
       fit: StackFit.expand,
       children: [
-        ColoredBox(color: Colors.black),
+        ColoredBox(color: Color(0xFF2A3440)),
         Center(
           child: Icon(Icons.play_circle_fill_rounded,
               color: Colors.white70, size: 44),

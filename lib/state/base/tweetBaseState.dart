@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
+import 'package:flutter_twitter_clone/helper/video_thumbnail_helper.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/state/appState.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
@@ -69,7 +70,21 @@ class TweetBaseState extends AppState {
         imageUrl: tweet.imagePath,
         listId: listId ?? tweet.listId,
         mediaKind: tweet.mediaKind ?? 'image',
+        thumbnailUrl: tweet.thumbnailUrl,
       );
+
+  /// Makes a still image from a picked video and uploads it. Returns its URL,
+  /// or null if the thumbnail could not be made (the post still uploads).
+  Future<String?> uploadVideoThumbnail(File video) async {
+    final thumb = await makeVideoThumbnail(video);
+    if (thumb == null) return null;
+    try {
+      return await _repo.uploadFile(kPostMediaBucket, thumb);
+    } catch (error) {
+      cprint(error, errorIn: 'uploadVideoThumbnail');
+      return null;
+    }
+  }
 
   /// Upload an image to the post-media bucket and return its URL.
   Future<String?> uploadFile(File file) async {

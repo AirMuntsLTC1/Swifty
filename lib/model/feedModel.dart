@@ -17,6 +17,8 @@ class FeedModel {
   String? imagePath;
   /// 'image' or 'video' when imagePath is set (null for text-only posts).
   String? mediaKind;
+  /// Still image of a video post (null for photos and text posts).
+  String? thumbnailUrl;
   List<String>? tags;
   List<String?>? replyTweetKeyList;
   String?
@@ -38,6 +40,7 @@ class FeedModel {
       required this.createdAt,
       this.imagePath,
       this.mediaKind,
+      this.thumbnailUrl,
       this.likeList,
       this.tags,
       this.user,
@@ -47,6 +50,14 @@ class FeedModel {
       this.childRetwetkey,
       this.listId,
       this.attachedList});
+  /// The picture to show for this post before any video starts.
+  String? get posterUrl {
+    if (mediaKind == 'video') {
+      return (thumbnailUrl == null || thumbnailUrl!.isEmpty) ? null : thumbnailUrl;
+    }
+    return imagePath;
+  }
+
   toJson() {
     return {
       "userId": userId,

@@ -152,6 +152,9 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
         }
         tweetModel.imagePath = mediaUrl;
         tweetModel.mediaKind = _video != null ? 'video' : 'image';
+        if (_video != null) {
+          tweetModel.thumbnailUrl = await state.uploadVideoThumbnail(_video!);
+        }
       }
 
       String? tweetId;

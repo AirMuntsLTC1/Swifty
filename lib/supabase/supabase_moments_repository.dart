@@ -8,6 +8,7 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:flutter_twitter_clone/helper/video_thumbnail_helper.dart';
 import 'package:flutter_twitter_clone/helper/app_error.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/model/moment_models.dart';
@@ -134,10 +135,20 @@ class MomentsRepository {
 
       // A story holds one piece of media. A video takes priority.
       String? photoUrl;
+      String? thumbUrl;
       String mediaType = 'text';
       if (video != null) {
         photoUrl = await _base.uploadFile(kStoriesBucket, video);
         mediaType = 'video';
+        // The thumbnail is best effort: the story still posts without it.
+        final thumb = await makeVideoThumbnail(video);
+        if (thumb != null) {
+          try {
+            thumbUrl = await _base.uploadFile(kStoriesBucket, thumb);
+          } catch (_) {
+            thumbUrl = null;
+          }
+        }
       } else if (image != null) {
         photoUrl = await _base.uploadFile(kStoriesBucket, image);
         mediaType = 'image';
@@ -149,6 +160,7 @@ class MomentsRepository {
           .insert({
             'author_id': me,
             'media_type': mediaType,
+            'thumbnail_url': thumbUrl,
             'photo_path': photoUrl,
             'bg_color': photoUrl == null ? bgColor : null,
             'layers': [
