@@ -12,6 +12,14 @@ class AppTheme {
     primaryColor: AppColor.primary,
     cardColor: Colors.white,
     unselectedWidgetColor: Colors.grey,
+    // Soft light-grey separators everywhere (feed, search, settings, lists).
+    // Without this, Divider() falls back to a dark default and looks black.
+    dividerColor: const Color(0xffEFF3F4),
+    dividerTheme: const DividerThemeData(
+      color: Color(0xffEFF3F4),
+      thickness: 0.6,
+      space: 0,
+    ),
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: AppColor.white,
     ),
@@ -80,3 +88,5 @@ class AppTheme {
 String get description {
   return '';
 }
+
+
