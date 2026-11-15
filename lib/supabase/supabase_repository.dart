@@ -85,7 +85,7 @@ class SupabaseRepository {
   UserModel fallbackUser(String id) => UserModel(
         key: id,
         userId: id,
-        displayName: 'Swifly user',
+        displayName: 'Swifs user',
         userName: '@user',
         profilePic: Constants.dummyProfilePic,
         bio: '',

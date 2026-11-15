@@ -108,7 +108,7 @@ class _SuggestedUsersState extends State<SuggestedUsers> {
                   slivers: [
                     SliverAppBar(
                       title:
-                          SwiflyLogo(size: 40),
+                          SwiflyLogo(size: 28),
                       backgroundColor:
                           Theme.of(context).appBarTheme.backgroundColor,
                       centerTitle: true,
@@ -229,3 +229,5 @@ class _SuggestedUsersState extends State<SuggestedUsers> {
     );
   }
 }
+
+

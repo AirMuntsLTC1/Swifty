@@ -50,7 +50,7 @@ class MyApp extends StatelessWidget {
             create: (_) => SuggestionsState()),
       ],
       child: MaterialApp(
-        title: 'Swifly',
+        title: 'Swifs',
         theme: AppTheme.appTheme.copyWith(
           textTheme: GoogleFonts.mulishTextTheme(
             Theme.of(context).textTheme,
@@ -65,3 +65,5 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+

@@ -16,7 +16,7 @@ class AboutPage extends StatelessWidget {
       appBar: CustomAppBar(
         isBackButton: true,
         title: customTitleText(
-          'About Fwitter',
+          'About Swifs',
         ),
       ),
       body: ListView(
@@ -54,7 +54,7 @@ class AboutPage extends StatelessWidget {
             onPressed: () async {
               showLicensePage(
                 context: context,
-                applicationName: 'Fwitter',
+                applicationName: 'Swifs',
                 applicationVersion: '1.0.0',
                 useRootNavigator: true,
               );
@@ -78,3 +78,5 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
+
+

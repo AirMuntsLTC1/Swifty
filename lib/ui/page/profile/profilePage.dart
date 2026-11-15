@@ -318,8 +318,8 @@ class _ProfilePageState extends State<ProfilePage>
       socialMetaTagParameters: SocialMetaTagParameters(
         description: !user.bio!.contains("Edit profile")
             ? user.bio
-            : "Checkout ${user.displayName}'s profile on Fwitter app",
-        title: "${user.displayName} is on Fwitter app",
+            : "Checkout ${user.displayName}'s profile on Swifs app",
+        title: "${user.displayName} is on Swifs app",
         imageUrl: Uri.parse(user.profilePic!),
       ),
     );
@@ -653,3 +653,5 @@ const List<Choice> choices = <Choice>[
   Choice(title: 'View Lists', icon: LucideIcons.list),
   Choice(title: 'View Moments', icon: LucideIcons.zap),
 ];
+
+

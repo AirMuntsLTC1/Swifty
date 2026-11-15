@@ -106,7 +106,7 @@ class PrivacyAndSaftyPage extends StatelessWidget {
           SettingRowWidget(
             "Precise location",
             subtitle:
-                'Disabled \n\n\nIf enabled, Fwitter will collect, store, and use your device\'s precise location, such as your GPS information. This lets Fwitter improve your experience - for example, showing you mpre local content, ads, and recommendations.',
+                'Disabled \n\n\nIf enabled, Swifs will collect, store, and use your device\'s precise location, such as your GPS information. This lets Swifs improve your experience - for example, showing you mpre local content, ads, and recommendations.',
           ),
           HeaderWidget(
             'Personalisation and data',
@@ -117,7 +117,7 @@ class PrivacyAndSaftyPage extends StatelessWidget {
             subtitle: "Allow all",
           ),
           SettingRowWidget(
-            "See your Fwitter data",
+            "See your Swifs data",
             subtitle:
                 "Review and edit your profile information and data associated with your account.",
           ),
@@ -126,3 +126,5 @@ class PrivacyAndSaftyPage extends StatelessWidget {
     );
   }
 }
+
+

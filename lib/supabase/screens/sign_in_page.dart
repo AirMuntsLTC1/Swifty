@@ -58,7 +58,7 @@ class _SignInPageState extends State<SignInPage> {
           children: [
             const SizedBox(height: 8),
             Text(
-              'Welcome to Swifly',
+              'Welcome to Swifs',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
@@ -123,3 +123,5 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 }
+
+

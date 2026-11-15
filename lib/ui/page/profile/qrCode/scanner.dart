@@ -174,7 +174,7 @@ class _ScanState extends State<ScanScreen> with SingleTickerProviderStateMixin {
       setState(() {
         result = scanData;
       });
-      if (result.code!.contains("fwitter/profile/")) {
+      if (result.code!.contains("swifs/profile/")) {
         isFound = true;
         Navigator.pop(context);
         var userId = result.code!.split("/")[2];
@@ -249,7 +249,7 @@ class _QrCodeState extends State<QrCode> {
                       borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.all(22),
                   child: QrImageView(
-                    data: "fwitter/profile/${widget.user.userId}",
+                    data: "swifs/profile/${widget.user.userId}",
                     embeddedImageStyle:
                         QrEmbeddedImageStyle(size: const Size(60, 60)),
                     version: QrVersions.auto,
@@ -266,3 +266,5 @@ class _QrCodeState extends State<QrCode> {
     );
   }
 }
+
+

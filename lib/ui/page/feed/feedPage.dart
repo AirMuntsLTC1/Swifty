@@ -138,7 +138,7 @@ class _FeedPageBody extends StatelessWidget {
             );
           },
         ),
-        title: SwiflyLogo(size: 40),
+        title: SwiflyLogo(size: 28),
         centerTitle: true,
         iconTheme: IconThemeData(color: Theme.of(context).primaryColor),
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
@@ -153,3 +153,5 @@ class _FeedPageBody extends StatelessWidget {
     );
   }
 }
+
+

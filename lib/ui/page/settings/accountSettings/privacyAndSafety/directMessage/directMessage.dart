@@ -33,7 +33,7 @@ class DirectMessagesPage extends StatelessWidget {
             visibleSwitch: true,
             vPadding: 20,
             subtitle:
-                'You will be able to receive Direct Message requests from anyone on Fwitter, even if you don\'t follow them.',
+                'You will be able to receive Direct Message requests from anyone on Swifs, even if you don\'t follow them.',
           ),
           SettingRowWidget(
             "Show read receipts",
@@ -48,3 +48,5 @@ class DirectMessagesPage extends StatelessWidget {
     );
   }
 }
+
+

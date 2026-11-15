@@ -48,7 +48,7 @@ class SettingsAndPrivacyPage extends StatelessWidget {
               navigateTo: 'AccessibilityPage'),
           const SettingRowWidget("Proxy", navigateTo: "ProxyPage"),
           const SettingRowWidget(
-            "About Fwitter",
+            "About Swifs",
             navigateTo: "AboutPage",
           ),
           const SettingRowWidget(
@@ -56,10 +56,12 @@ class SettingsAndPrivacyPage extends StatelessWidget {
             showDivider: false,
             vPadding: 10,
             subtitle:
-                'These settings affect all of your Fwitter accounts on this devce.',
+                'These settings affect all of your Swifs accounts on this devce.',
           )
         ],
       ),
     );
   }
 }
+
+
