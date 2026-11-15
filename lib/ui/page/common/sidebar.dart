@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/helper/constant.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
+import 'package:flutter_twitter_clone/ui/page/moments/moments_page.dart';
 import 'package:flutter_twitter_clone/ui/page/bookmark/bookmarkPage.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/listsPage.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/follow/followerListPage.dart';
@@ -278,7 +279,11 @@ class _SidebarMenuState extends State<SidebarMenu> {
                       onPressed: () {
                     Navigator.push(context, ListsPage.getRoute());
                   }),
-                  _menuListRowButton('Moments', icon: AppIcon.moments),
+                  _menuListRowButton('Moments', icon: AppIcon.moments, isEnable: true,
+                      onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MomentsPage.getRoute());
+                  }),
                   const Divider(),
                   _menuListRowButton('Settings and privacy', isEnable: true,
                       onPressed: () {
