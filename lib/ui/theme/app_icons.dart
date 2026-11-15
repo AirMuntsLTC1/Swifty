@@ -20,7 +20,7 @@ class AppIcon {
   static const IconData menu = LucideIcons.menu;
 
   static const IconData settings = LucideIcons.settings;
-  static const IconData adTheRate = LucideLucideIcons.info;
+  static const IconData adTheRate = LucideIcons.info;
   static const IconData reply = LucideIcons.messageCircle;
   static const IconData retweet = LucideIcons.repeat2;
   static const IconData image = LucideIcons.image;
