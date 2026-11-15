@@ -13,3 +13,5 @@
 
 -dontwarn com.google.android.play.core.**
 -dontwarn io.flutter.app.FlutterPlayStoreSplitApplication
+
+

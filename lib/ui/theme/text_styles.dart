@@ -36,3 +36,5 @@ class TextStyles {
         color: AppColor.darkGrey, fontSize: 14, fontWeight: FontWeight.bold);
   }
 }
+
+

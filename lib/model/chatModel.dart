@@ -40,3 +40,5 @@ class ChatMessage {
         "timeStamp": timeStamp
       };
 }
+
+

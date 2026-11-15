@@ -83,3 +83,5 @@ class DeviceSettings extends ChangeNotifier {
   String get proxyHost => _string('proxy_host', '');
   int get proxyPort => _int('proxy_port', 8080);
 }
+
+

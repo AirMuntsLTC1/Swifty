@@ -54,3 +54,5 @@ revoke all on function public.swifs_create_post(text, text, text[], text, uuid)
   from public, anon;
 grant execute on function public.swifs_create_post(text, text, text[], text, uuid)
   to authenticated;
+
+

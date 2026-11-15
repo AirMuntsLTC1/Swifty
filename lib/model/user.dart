@@ -179,3 +179,5 @@ class UserModel extends Equatable {
         followingList
       ];
 }
+
+

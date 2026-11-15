@@ -23,3 +23,5 @@ drop policy if exists swifs_user_settings_update_own on public.user_settings;
 create policy swifs_user_settings_update_own on public.user_settings
   for update to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+

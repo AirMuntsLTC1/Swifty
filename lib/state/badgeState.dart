@@ -89,3 +89,5 @@ class BadgeState extends ChangeNotifier {
     if (channel != null) await _repo.db.removeChannel(channel);
   }
 }
+
+

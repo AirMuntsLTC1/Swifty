@@ -268,3 +268,5 @@ class _QrCodeState extends State<QrCode> {
 }
 
 
+
+

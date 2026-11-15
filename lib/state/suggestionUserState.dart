@@ -104,3 +104,5 @@ class SuggestionsState extends AppState {
     }
   }
 }
+
+

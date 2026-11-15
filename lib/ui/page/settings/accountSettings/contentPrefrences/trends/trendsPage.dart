@@ -123,3 +123,5 @@ class TrendsPage extends StatelessWidget {
     );
   }
 }
+
+

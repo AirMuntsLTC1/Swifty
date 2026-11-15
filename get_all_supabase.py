@@ -88,3 +88,5 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     write_section(f, "9. STORAGE BUCKETS", get_api("storage/buckets"))
 
 print(f"\n✅ Done! The complete report with source code has been saved to:\n{OUTPUT_FILE}")
+
+

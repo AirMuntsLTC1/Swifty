@@ -5,3 +5,5 @@ Apply in Termux:
   cd ~/NewApp && git add -A && git commit -m 'Refresh profile after edit' && git push
 
 No SQL to run.
+
+

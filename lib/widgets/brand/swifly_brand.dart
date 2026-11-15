@@ -115,3 +115,5 @@ class _SwiflyLoaderState extends State<SwiflyLoader>
     );
   }
 }
+
+

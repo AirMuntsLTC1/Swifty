@@ -27,3 +27,5 @@ class AppInfo {
       'Swifs every day. If you have a question, an idea or a problem, tell us '
       'using the buttons below.';
 }
+
+

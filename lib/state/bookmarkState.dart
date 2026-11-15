@@ -52,3 +52,5 @@ class BookmarkState extends AppState {
     return SupabaseRepository.instance.fetchPost(tweetId);
   }
 }
+
+

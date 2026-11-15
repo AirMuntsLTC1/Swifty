@@ -8,3 +8,5 @@ Apply in Termux:
   cd ~/NewApp && git add -A && git commit -m 'Show errors on screen' && git push
 
 No SQL to run for this change.
+
+

@@ -96,3 +96,5 @@ class _ResultMatch {
   late bool isUrl;
   late String text;
 }
+
+

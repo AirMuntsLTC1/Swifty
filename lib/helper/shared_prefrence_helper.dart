@@ -49,3 +49,5 @@ class SharedPreferenceHelper {
 }
 
 enum UserPreferenceKey { AccessToken, UserProfile, UserName, IsFirstTimeApp }
+
+

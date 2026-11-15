@@ -44,3 +44,5 @@ Then run the SQL file in Supabase, then let GitHub Actions build.
   no Flutter toolchain in this environment. If the build reports an error, send it.
 - The FCM push-token code still uses Firebase messaging on purpose; all app data
   goes through Supabase.
+
+

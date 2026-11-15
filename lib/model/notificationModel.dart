@@ -40,3 +40,5 @@ extension NotificationModelHelper on NotificationModel {
       ? DateTime.tryParse(updatedAt ?? createdAt!)
       : null;
 }
+
+

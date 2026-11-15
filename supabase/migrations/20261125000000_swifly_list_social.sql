@@ -402,3 +402,5 @@ grant execute on function public.swifly_cancel_join_request(uuid) to authenticat
 grant execute on function public.swifly_respond_join_request(uuid, uuid, boolean) to authenticated;
 grant execute on function public.swifly_tag_post_to_list(uuid, uuid) to authenticated;
 grant execute on function public.swifly_unread_counts() to authenticated;
+
+

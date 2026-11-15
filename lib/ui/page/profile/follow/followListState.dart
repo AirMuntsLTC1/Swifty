@@ -57,3 +57,5 @@ class FollowListState extends AppState {
   /// Kept for compatibility. The follow trigger creates the notification.
   void addFollowNotification(String profileId) {}
 }
+
+

@@ -147,3 +147,5 @@ else:
     print('Side menu: Lists item opens ListsPage')
 
 print('Done. Next: run the SQL migration in Supabase, then build the app.')
+
+

@@ -159,3 +159,5 @@ class SupabaseAuthService {
 
   Future<void> signOut() => _client.auth.signOut();
 }
+
+

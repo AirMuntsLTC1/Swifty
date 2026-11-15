@@ -5,3 +5,5 @@ Apply in Termux:
   cd ~/NewApp && git add -A && git commit -m 'Photo opens post, fix previewer' && git push
 
 No SQL to run for this change.
+
+

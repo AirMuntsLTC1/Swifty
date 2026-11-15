@@ -28,3 +28,5 @@ ThemeData darkThemeFor(String appearance) {
     textTheme: GoogleFonts.mulishTextTheme(base.textTheme),
   );
 }
+
+

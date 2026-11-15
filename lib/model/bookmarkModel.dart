@@ -20,3 +20,5 @@ class BookmarkModel {
         "created_at": createdAt,
       };
 }
+
+

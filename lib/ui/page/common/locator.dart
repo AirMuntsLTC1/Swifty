@@ -6,3 +6,5 @@ final getIt = GetIt.instance;
 void setupDependencies() {
   getIt.registerSingleton<SharedPreferenceHelper>(SharedPreferenceHelper());
 }
+
+

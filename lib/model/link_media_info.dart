@@ -89,3 +89,5 @@ class LinkMediaInfo extends Equatable {
         height
       ];
 }
+
+

@@ -58,3 +58,5 @@ begin
     alter publication supabase_realtime add table public.post_reposts;
   end if;
 end $$;
+
+

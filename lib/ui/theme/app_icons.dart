@@ -53,3 +53,5 @@ class AppIcon {
   static const IconData locationPin = LucideIcons.mapPin;
   static const IconData edit = LucideIcons.pencil;
 }
+
+

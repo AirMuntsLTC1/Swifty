@@ -163,3 +163,5 @@ create policy "swifly_objects_insert_own_folder" on storage.objects
     bucket_id in ('post-media', 'avatars', 'stories')
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+

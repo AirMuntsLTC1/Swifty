@@ -18,13 +18,15 @@ const EdgeInsets kSettingPadding = EdgeInsets.symmetric(horizontal: 18);
 /// Right-pointing arrow for rows that open a page. Rotates the app's
 /// chevronDown icon so it only needs icons the app already uses.
 Widget settingsChevron() {
-  return const SizedBox(
+  // Not const: Transform.rotate is not a const constructor.
+  return SizedBox(
     width: 20,
     height: 20,
     child: Center(
       child: Transform.rotate(
         angle: -math.pi / 2,
-        child: Icon(LucideIcons.chevronDown, color: AppColor.darkGrey, size: 20),
+        child: const Icon(LucideIcons.chevronDown,
+            color: AppColor.darkGrey, size: 20),
       ),
     ),
   );
@@ -321,3 +323,5 @@ Future<bool> showConfirmDialog(
   );
   return ok ?? false;
 }
+
+

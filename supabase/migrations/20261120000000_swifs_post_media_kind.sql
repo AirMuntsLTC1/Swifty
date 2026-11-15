@@ -10,3 +10,5 @@ alter table public.post_media
   add constraint post_media_kind_check
   check (kind in ('image', 'photo', 'gif', 'video'))
   not valid;
+
+

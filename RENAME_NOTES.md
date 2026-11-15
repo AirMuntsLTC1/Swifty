@@ -5,3 +5,5 @@ Apply in Termux:
   cd ~/NewApp && git add -A && git commit -m 'Rename to Swifs, smaller plane logo' && git push
 
 After install: uninstall the old Fwitter/Swifly app once, then reinstall so the new launcher name and icon show.
+
+

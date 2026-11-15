@@ -30,3 +30,5 @@ def __lldb_init_module(debugger: lldb.SBDebugger, _):
     bp.SetScriptCallbackFunction('{}.handle_new_rx_page'.format(__name__))
     bp.SetAutoContinue(True)
     print("-- LLDB integration loaded --")
+
+

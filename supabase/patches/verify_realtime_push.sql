@@ -27,3 +27,5 @@ from information_schema.routines
 where routine_schema = 'public'
   and routine_name in ('swifly_register_push_token', 'swifly_unread_counts')
 order by routine_name;
+
+

@@ -5,3 +5,5 @@ Apply in Termux:
   cd ~/NewApp && git add -A && git commit -m 'Animated heart like' && git push
 
 No SQL to run.
+
+

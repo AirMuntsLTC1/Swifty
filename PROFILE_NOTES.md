@@ -5,3 +5,5 @@ Apply in Termux:
   cd ~/NewApp && git add -A && git commit -m 'Profile edit, retweets in feed, white dialogs' && git push
 
 Then run supabase/migrations/20261122000000_swifs_profile_fields.sql in the Supabase SQL Editor.
+
+

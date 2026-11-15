@@ -551,3 +551,5 @@ drop policy if exists swifly_list_pins_select on public.list_pins;
 create policy swifly_list_pins_select on public.list_pins
   for select to authenticated
   using (user_id = auth.uid());
+
+

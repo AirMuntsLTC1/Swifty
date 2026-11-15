@@ -41,3 +41,5 @@ create policy "swifly_objects_delete_own_folder" on storage.objects
     bucket_id in ('post-media', 'avatars', 'stories', 'covers')
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+

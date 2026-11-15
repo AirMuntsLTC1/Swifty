@@ -302,3 +302,5 @@ serve(async (req) => {
     return respond({ error: error instanceof Error ? error.message : "Authentication request failed." }, 500);
   }
 });
+
+

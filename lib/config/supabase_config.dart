@@ -26,3 +26,5 @@ class SupabaseConfig {
   static bool get isConfigured =>
       !url.contains('YOUR-PROJECT-REF') && !anonKey.contains('YOUR-ANON-KEY');
 }
+
+

@@ -76,3 +76,5 @@ Widget customText(
 Widget loader() {
   return const Center(child: SwiflyLoader());
 }
+
+
