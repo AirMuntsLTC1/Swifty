@@ -88,7 +88,7 @@ class SwiflyListsRepository {
     final rows = List<Map<String, dynamic>>.from(
       await _db
           .from('profiles')
-          .select('id, username, display_name, avatar_url')
+          .select('id, username, display_name, avatar_url, is_verified')
           .inFilter('id', unique),
     );
     return {
@@ -344,7 +344,7 @@ class SwiflyListsRepository {
         final rows = List<Map<String, dynamic>>.from(
           await _db
               .from('profiles')
-              .select('id, username, display_name, avatar_url')
+              .select('id, username, display_name, avatar_url, is_verified')
               .or('username.ilike.%$q%,display_name.ilike.%$q%')
               .limit(25),
         );

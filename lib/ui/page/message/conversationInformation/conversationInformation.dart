@@ -1,3 +1,4 @@
+import 'package:flutter_twitter_clone/widgets/verified_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/profilePage.dart';
@@ -48,14 +49,7 @@ class ConversationInformation extends StatelessWidget {
                 width: 3,
               ),
               user.isVerified!
-                  ? customIcon(
-                      context,
-                      icon: AppIcon.blueTick,
-                      isTwitterIcon: false,
-                      iconColor: AppColor.primary,
-                      size: 18,
-                      paddingIcon: 3,
-                    )
+                  ? VerifiedBadge(size: 18)
                   : const SizedBox(width: 0),
             ],
           ),

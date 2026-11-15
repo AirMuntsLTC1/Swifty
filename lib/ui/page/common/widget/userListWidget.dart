@@ -1,3 +1,4 @@
+import 'package:flutter_twitter_clone/widgets/verified_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -131,14 +132,7 @@ class UserTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 3),
                 user.isVerified!
-                    ? customIcon(
-                        context,
-                        icon: AppIcon.blueTick,
-                        isTwitterIcon: false,
-                        iconColor: AppColor.primary,
-                        size: 13,
-                        paddingIcon: 3,
-                      )
+                    ? VerifiedBadge(size: 13)
                     : const SizedBox(width: 0),
               ],
             ),

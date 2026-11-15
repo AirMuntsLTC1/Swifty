@@ -1,3 +1,4 @@
+import 'package:flutter_twitter_clone/widgets/verified_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
@@ -256,14 +257,7 @@ class _TweetBody extends StatelessWidget {
                         ),
                         const SizedBox(width: 3),
                         model.user!.isVerified!
-                            ? customIcon(
-                                context,
-                                icon: AppIcon.blueTick,
-                                isTwitterIcon: false,
-                                iconColor: AppColor.primary,
-                                size: 13,
-                                paddingIcon: 3,
-                              )
+                            ? VerifiedBadge(size: 13)
                             : const SizedBox(width: 0),
                         SizedBox(
                           width: model.user!.isVerified! ? 5 : 0,
@@ -387,14 +381,7 @@ class _TweetDetailBody extends StatelessWidget {
                     ),
                     const SizedBox(width: 3),
                     model.user!.isVerified!
-                        ? customIcon(
-                            context,
-                            icon: AppIcon.blueTick,
-                            isTwitterIcon: false,
-                            iconColor: AppColor.primary,
-                            size: 13,
-                            paddingIcon: 3,
-                          )
+                        ? VerifiedBadge(size: 13)
                         : const SizedBox(width: 0),
                     SizedBox(
                       width: model.user!.isVerified! ? 5 : 0,

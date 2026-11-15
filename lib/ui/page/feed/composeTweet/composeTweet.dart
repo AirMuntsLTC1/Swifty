@@ -1,3 +1,4 @@
+import 'package:flutter_twitter_clone/widgets/verified_badge.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -327,14 +328,7 @@ class _ComposeRetweet
                   ),
                   const SizedBox(width: 3),
                   model.user!.isVerified!
-                      ? customIcon(
-                          context,
-                          icon: AppIcon.blueTick,
-                          isTwitterIcon: false,
-                          iconColor: AppColor.primary,
-                          size: 13,
-                          paddingIcon: 3,
-                        )
+                      ? VerifiedBadge(size: 13)
                       : const SizedBox(width: 0),
                   SizedBox(width: model.user!.isVerified! ? 5 : 0),
                   Flexible(
@@ -509,14 +503,7 @@ class _ComposeTweet
                 ),
                 const SizedBox(width: 3),
                 viewState.model!.user!.isVerified!
-                    ? customIcon(
-                        context,
-                        icon: AppIcon.blueTick,
-                        isTwitterIcon: false,
-                        iconColor: AppColor.primary,
-                        size: 13,
-                        paddingIcon: 3,
-                      )
+                    ? VerifiedBadge(size: 13)
                     : const SizedBox(width: 0),
                 SizedBox(width: viewState.model!.user!.isVerified! ? 5 : 0),
                 customText('${viewState.model!.user!.userName}',
@@ -688,14 +675,7 @@ class _UserTile extends StatelessWidget {
           ),
           const SizedBox(width: 3),
           user.isVerified!
-              ? customIcon(
-                  context,
-                  icon: AppIcon.blueTick,
-                  isTwitterIcon: false,
-                  iconColor: AppColor.primary,
-                  size: 13,
-                  paddingIcon: 3,
-                )
+              ? VerifiedBadge(size: 13)
               : const SizedBox(width: 0),
         ],
       ),

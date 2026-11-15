@@ -92,7 +92,7 @@ class SupabaseRepository {
       following: following.length,
       followersList: List<String>.from(followers),
       followingList: List<String>.from(following),
-      isVerified: false,
+      isVerified: row['is_verified'] == true,
       bannerImage: (row['cover_url'] ?? '').toString().isEmpty
           ? null
           : row['cover_url'].toString(),

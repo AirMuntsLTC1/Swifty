@@ -35,7 +35,7 @@ class SettingsTools {
     final profiles = List<Map<String, dynamic>>.from(
       await _db
           .from('profiles')
-          .select('id, username, display_name, avatar_url')
+          .select('id, username, display_name, avatar_url, is_verified')
           .inFilter('id', ids),
     );
     return profiles.map((p) {

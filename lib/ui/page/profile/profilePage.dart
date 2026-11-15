@@ -1,3 +1,4 @@
+import 'package:flutter_twitter_clone/widgets/verified_badge.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -542,12 +543,7 @@ class UserNameRowWidget extends StatelessWidget {
                 width: 3,
               ),
               user.isVerified!
-                  ? customIcon(context,
-                      icon: AppIcon.blueTick,
-                      isTwitterIcon: false,
-                      iconColor: AppColor.primary,
-                      size: 13,
-                      paddingIcon: 3)
+                  ? VerifiedBadge(size: 13)
                   : const SizedBox(width: 0),
             ],
           ),

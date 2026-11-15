@@ -70,7 +70,7 @@ class MomentsRepository {
       final results = await Future.wait<dynamic>([
         db
             .from('profiles')
-            .select('id, username, display_name, avatar_url')
+            .select('id, username, display_name, avatar_url, is_verified')
             .inFilter('id', authorIds),
         db
             .from('story_views')

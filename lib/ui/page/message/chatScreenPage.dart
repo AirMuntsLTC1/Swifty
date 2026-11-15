@@ -186,6 +186,35 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
     );
   }
 
+  /// Keyboard-safe layout. The Scaffold does not resize on each keyboard
+  /// frame. Only a small Builder reads the keyboard height, and the message
+  /// list and composer are built once, so they are not rebuilt every frame.
+  Widget _chatBodyStack() {
+    final messages = RepaintBoundary(child: _chatScreenBody());
+    final composer = RepaintBoundary(child: _bottomEntryField());
+    return Builder(
+      builder: (context) {
+        final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+        return Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 50 + keyboard),
+                child: messages,
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: keyboard,
+              child: composer,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<bool> _onWillPop() async {
     state.setIsChatScreenOpen = false;
     state.onChatScreenClosed();
@@ -262,19 +291,9 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                 })
           ],
         ),
+        resizeToAvoidBottomInset: false,
         body: SafeArea(
-          child: Stack(
-            children: <Widget>[
-              Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 50),
-                  child: _chatScreenBody(),
-                ),
-              ),
-              _bottomEntryField()
-            ],
-          ),
+          child: _chatBodyStack(),
         ),
       ),
     );

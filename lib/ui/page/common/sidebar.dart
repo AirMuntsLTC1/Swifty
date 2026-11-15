@@ -1,3 +1,4 @@
+import 'package:flutter_twitter_clone/widgets/verified_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/helper/constant.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -77,12 +78,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                     width: 3,
                   ),
                   state.userModel!.isVerified ?? false
-                      ? customIcon(context,
-                          icon: AppIcon.blueTick,
-                          isTwitterIcon: false,
-                          iconColor: AppColor.primary,
-                          size: 18,
-                          paddingIcon: 3)
+                      ? VerifiedBadge(size: 18)
                       : const SizedBox(
                           width: 0,
                         ),
