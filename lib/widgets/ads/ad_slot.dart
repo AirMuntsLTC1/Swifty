@@ -15,6 +15,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 import 'package:flutter_twitter_clone/config/ads_config.dart';
 import 'package:flutter_twitter_clone/helper/open_link.dart';
 import 'package:flutter_twitter_clone/model/ad_campaign.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_ads.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
