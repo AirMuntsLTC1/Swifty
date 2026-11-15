@@ -1,12 +1,15 @@
 // lib/widgets/ads/admob_native_slot.dart
 //
-// Google AdMob native ad for a feed slot. Google draws the ad and its required
-// "Ad" disclosure. Nothing is shown until Google returns a real ad.
+// Google AdMob native ad in a feed slot. It is drawn with the Swifly post
+// layout (android/.../res/layout/native_post_ad.xml, factory "swiflyPostAd").
+// Nothing is shown until Google returns an ad.
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:flutter_twitter_clone/config/ads_config.dart';
-import 'package:flutter_twitter_clone/ui/theme/theme.dart';
+
+/// Must match the id registered in MainActivity.kt.
+const String kAdMobPostFactoryId = 'swiflyPostAd';
 
 class AdMobSetup {
   AdMobSetup._();
@@ -40,17 +43,8 @@ class _AdMobNativeSlotState extends State<AdMobNativeSlot> {
     if (!mounted) return;
     final ad = NativeAd(
       adUnitId: kAdMobNativeUnitAndroid,
+      factoryId: kAdMobPostFactoryId,
       request: const AdRequest(),
-      nativeTemplateStyle: NativeTemplateStyle(
-        templateType: TemplateType.medium,
-        mainBackgroundColor: Colors.white,
-        callToActionTextStyle: NativeTemplateTextStyle(
-          textColor: Colors.white,
-          backgroundColor: AppColor.primary,
-          style: NativeTemplateFontStyle.bold,
-          size: 15,
-        ),
-      ),
       listener: NativeAdListener(
         onAdLoaded: (_) {
           if (mounted) setState(() => _loaded = true);
@@ -83,7 +77,7 @@ class _AdMobNativeSlotState extends State<AdMobNativeSlot> {
     if (!_loaded || ad == null) return const SizedBox.shrink();
     return Container(
       color: Colors.white,
-      height: 330,
+      height: 440,
       child: AdWidget(ad: ad),
     );
   }

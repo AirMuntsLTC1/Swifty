@@ -1,6 +1,8 @@
 // lib/widgets/ads/ad_slot.dart
 //
-// Ad positions in the home feed. Each slot shows, in order:
+// Ad positions in the home feed and Moments. Each ad is drawn like a Swifly
+// post: header, text, media, action icons, and a link bar with the button.
+// Each slot shows, in order:
 //   1. an in-house campaign (image, card or video) if one is active, or
 //   2. a Google AdMob native ad if AdMob is enabled, or
 //   3. nothing.
@@ -13,7 +15,6 @@ import 'package:visibility_detector/visibility_detector.dart';
 import 'package:flutter_twitter_clone/config/ads_config.dart';
 import 'package:flutter_twitter_clone/helper/open_link.dart';
 import 'package:flutter_twitter_clone/model/ad_campaign.dart';
-import 'package:flutter_twitter_clone/supabase/supabase_ads.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
@@ -72,8 +73,8 @@ class _AdSlotState extends State<AdSlot> {
     try {
       final ads = await AdsCache.instance.load();
       if (!mounted) return;
-      // Each in-house campaign appears once, in its own slot.
-      final inHouse = widget.slotIndex < ads.length ? ads[widget.slotIndex] : null;
+      final inHouse =
+          widget.slotIndex < ads.length ? ads[widget.slotIndex] : null;
       setState(() {
         _ad = inHouse;
         _useAdMob = inHouse == null && kAdMobEnabled;
@@ -108,6 +109,7 @@ class _AdSlotState extends State<AdSlot> {
   }
 }
 
+/// An in-house ad drawn like a post.
 class AdCard extends StatefulWidget {
   const AdCard({super.key, required this.ad, required this.onHidden});
 
@@ -170,20 +172,27 @@ class _AdCardState extends State<AdCard> {
 
   Widget _media(AdCampaign ad) {
     if (ad.format == 'video' && ad.videoUrl != null && ad.videoUrl!.isNotEmpty) {
-      return AdVideo(url: ad.videoUrl!, posterUrl: ad.imageUrl);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: AdVideo(url: ad.videoUrl!, posterUrl: ad.imageUrl),
+      );
     }
     if (ad.imageUrl == null || ad.imageUrl!.isEmpty) {
       return const SizedBox.shrink();
     }
     return GestureDetector(
       onTap: _click,
-      child: AspectRatio(
-        aspectRatio: 1.91,
-        child: CachedNetworkImage(
-          imageUrl: ad.imageUrl!,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => Container(color: AppColor.extraLightGrey),
-          errorWidget: (_, __, ___) => Container(color: AppColor.extraLightGrey),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: AspectRatio(
+          aspectRatio: 1.91,
+          child: CachedNetworkImage(
+            imageUrl: ad.imageUrl!,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => Container(color: AppColor.extraLightGrey),
+            errorWidget: (_, __, ___) =>
+                Container(color: AppColor.extraLightGrey),
+          ),
         ),
       ),
     );
@@ -204,9 +213,11 @@ class _AdCardState extends State<AdCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header, like a post: avatar, name, handle and "Ad" in place of time.
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 4, 0),
+              padding: const EdgeInsets.fromLTRB(12, 12, 4, 0),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircularImage(path: ad.advertiserAvatarUrl, height: 40),
                   const SizedBox(width: 10),
@@ -230,29 +241,20 @@ class _AdCardState extends State<AdCard> {
                             ],
                           ],
                         ),
-                        Row(
-                          children: const [
-                            Text(
-                              'Ad',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColor.darkGrey,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            Text('·',
-                                style: TextStyle(color: AppColor.darkGrey)),
-                            SizedBox(width: 4),
-                            Icon(Icons.public,
-                                size: 14, color: AppColor.darkGrey),
-                          ],
+                        Text(
+                          '${ad.advertiserHandle} · Ad',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColor.darkGrey,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_horiz, color: AppColor.darkGrey),
+                    icon: const Icon(Icons.more_horiz,
+                        color: AppColor.darkGrey),
                     onSelected: (value) {
                       if (value == 'hide') _hide();
                       if (value == 'why') _whyThisAd();
@@ -263,23 +265,37 @@ class _AdCardState extends State<AdCard> {
                           value: 'why', child: Text('Why am I seeing this?')),
                     ],
                   ),
-                  IconButton(
-                    tooltip: 'Hide ad',
-                    icon: const Icon(LucideIcons.x, color: AppColor.darkGrey),
-                    onPressed: _hide,
-                  ),
                 ],
               ),
             ),
             if (hasBody)
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                 child: Text(
                   ad.body!,
-                  style: const TextStyle(fontSize: 15, height: 1.4),
+                  style: const TextStyle(fontSize: 15, height: 1.35),
                 ),
               ),
-            _media(ad),
+            if (!hasBody) const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _media(ad),
+            ),
+            // Action icons, same icons and spacing as the post row.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Icon(LucideIcons.messageCircle,
+                      size: 20, color: AppColor.darkGrey),
+                  Icon(LucideIcons.repeat2,
+                      size: 20, color: AppColor.darkGrey),
+                  Icon(LucideIcons.heart, size: 20, color: AppColor.darkGrey),
+                  Icon(LucideIcons.share2, size: 20, color: AppColor.darkGrey),
+                ],
+              ),
+            ),
             AdCtaBar(
               ad: ad,
               subtitle: subtitle,

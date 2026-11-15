@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_twitter_clone/widgets/newWidget/app_empty_state.dart';
 import 'package:flutter_twitter_clone/helper/constant.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/chatModel.dart';
@@ -196,7 +197,7 @@ class _ChatListPageState extends State<ChatListPage> {
     if (list == null) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 30),
-        child: EmptyList(
+        child: AppEmptyState(
           'No message available ',
           subTitle:
               'When someone sends you message,UserModel list\'ll show up here \n  To send message tap message button.',
@@ -206,7 +207,7 @@ class _ChatListPageState extends State<ChatListPage> {
     if (list.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 30),
-        child: EmptyList(
+        child: AppEmptyState(
           'No messages yet',
           subTitle:
               'Your conversations will show up here. Tap the message button to start one.',

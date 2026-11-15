@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
+import 'package:flutter_twitter_clone/widgets/newWidget/app_empty_state.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/model/notificationModel.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -109,7 +110,7 @@ class NotificationPageBody extends StatelessWidget {
     if (list == null || list.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 30),
-        child: EmptyList(
+        child: AppEmptyState(
           'No Notification available yet',
           subTitle: 'When new notification found, they\'ll show up here.',
         ),
