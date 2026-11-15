@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:flutter_twitter_clone/helper/app_error.dart';
 import 'package:flutter_twitter_clone/helper/constant.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
@@ -47,6 +48,17 @@ const String _postSelect =
 class SupabaseRepository {
   SupabaseRepository._();
   static final SupabaseRepository instance = SupabaseRepository._();
+
+  /// Every database and storage call goes through here. A failure is shown to
+  /// the user (with the action name), then rethrown for the caller to handle.
+  Future<T> _run<T>(String where, Future<T> Function() op) async {
+    try {
+      return await op();
+    } catch (error) {
+      showAppError(error, where: where);
+      rethrow;
+    }
+  }
 
   SupabaseClient get db => Supabase.instance.client;
   String? get uid => db.auth.currentUser?.id;
@@ -112,6 +124,7 @@ class SupabaseRepository {
   // ---------------------------------------------------------------------------
 
   Future<UserModel?> fetchUser(String userId) async {
+    return _run('fetchUser', () async {
     final res = await Future.wait<dynamic>([
       db.from('profiles').select().eq('id', userId).maybeSingle(),
       db.from('follows').select('follower').eq('followee', userId),
@@ -124,10 +137,12 @@ class SupabaseRepository {
     final following =
         (res[2] as List).map((e) => e['followee'].toString()).toList();
     return mapProfile(profile, followers: followers, following: following);
+  });
   }
 
   /// Users for search / suggestions, with follower and following lists filled.
   Future<List<UserModel>> fetchAllUsers({int limit = 100}) async {
+    return _run('fetchAllUsers', () async {
     final rows = List<Map<String, dynamic>>.from(
       await db
           .from('profiles')
@@ -164,6 +179,7 @@ class SupabaseRepository {
         following: followingBy[id] ?? const [],
       );
     }).toList();
+  });
   }
 
   Future<void> updateProfile({
@@ -171,6 +187,7 @@ class SupabaseRepository {
     String? bio,
     String? avatarUrl,
   }) async {
+    return _run('updateProfile', () async {
     final me = uid;
     if (me == null) return;
     final values = <String, dynamic>{
@@ -180,10 +197,12 @@ class SupabaseRepository {
     };
     if (values.isEmpty) return;
     await db.from('profiles').update(values).eq('id', me);
+  });
   }
 
   /// Creates the profile row if the signup trigger did not create one.
   Future<void> ensureOwnProfile() async {
+    return _run('ensureOwnProfile', () async {
     final user = db.auth.currentUser;
     if (user == null) return;
     try {
@@ -205,12 +224,14 @@ class SupabaseRepository {
         'display_name': (meta['display_name'] ?? handle).toString(),
         'bio': 'Edit profile to update bio',
       });
-    } catch (_) {
-      // Username collisions are handled by the sign-up flow; ignore here.
+    } catch (error) {
+      showAppError(error, where: 'Create profile');
     }
+  });
   }
 
   Future<void> setFollow(String targetId, {required bool follow}) async {
+    return _run('setFollow', () async {
     final me = uid;
     if (me == null || me == targetId) return;
     if (follow) {
@@ -226,6 +247,7 @@ class SupabaseRepository {
           .eq('follower', me)
           .eq('followee', targetId);
     }
+  });
   }
 
   // ---------------------------------------------------------------------------
@@ -236,6 +258,7 @@ class SupabaseRepository {
   /// public URL. Storage RLS (see the migration) only allows writes to the
   /// signed-in user's folder.
   Future<String> uploadFile(String bucket, File file) async {
+    return _run('uploadFile', () async {
     final me = uid ?? 'anon';
     final ext = p.extension(file.path).isEmpty ? '.jpg' : p.extension(file.path);
     final path = '$me/${DateTime.now().millisecondsSinceEpoch}$ext';
@@ -248,9 +271,11 @@ class SupabaseRepository {
           ),
         );
     return db.storage.from(bucket).getPublicUrl(path);
+  });
   }
 
   Future<void> deleteStorageUrl(String bucket, String url) async {
+    return _run('deleteStorageUrl', () async {
     final marker = '/object/public/$bucket/';
     final index = url.indexOf(marker);
     if (index < 0) return;
@@ -258,6 +283,7 @@ class SupabaseRepository {
         .split('?')
         .first);
     await db.storage.from(bucket).remove([path]);
+  });
   }
 
   // ---------------------------------------------------------------------------
@@ -269,24 +295,29 @@ class SupabaseRepository {
     List<String>? postIds,
     int limit = 60,
   }) async {
+    return _run('fetchPosts', () async {
     if (postIds != null && postIds.isEmpty) return [];
     var query = db.from('posts').select(_postSelect);
     if (authorId != null) query = query.eq('author_id', authorId);
     if (postIds != null) query = query.inFilter('id', postIds);
     final rows = await query.order('created_at', ascending: false).limit(limit);
     return hydratePosts(List<Map<String, dynamic>>.from(rows));
+  });
   }
 
   Future<FeedModel?> fetchPost(String postId) async {
+    return _run('fetchPost', () async {
     final rows = await db.from('posts').select(_postSelect).eq('id', postId).limit(1);
     final list = List<Map<String, dynamic>>.from(rows);
     if (list.isEmpty) return null;
     final posts = await hydratePosts(list);
     return posts.isEmpty ? null : posts.first;
+  });
   }
 
   /// Builds FeedModels (author, media, likes, comment count) for post rows.
   Future<List<FeedModel>> hydratePosts(List<Map<String, dynamic>> posts) async {
+    return _run('hydratePosts', () async {
     if (posts.isEmpty) return [];
     final ids = posts.map((e) => e['id'].toString()).toList();
     final authorIds =
@@ -343,6 +374,7 @@ class SupabaseRepository {
         user: profiles[authorId] ?? fallbackUser(authorId),
       );
     }).toList();
+  });
   }
 
   /// Creates the post and its photo in one database transaction
@@ -353,6 +385,7 @@ class SupabaseRepository {
     String? imageUrl,
     String audience = 'everyone',
   }) async {
+    return _run('createPost', () async {
     final me = uid;
     if (me == null) throw StateError('Not signed in');
     final id = await db.rpc('swifs_create_post', params: {
@@ -363,17 +396,23 @@ class SupabaseRepository {
           (imageUrl != null && imageUrl.isNotEmpty) ? imageUrl : null,
     });
     return id.toString();
+  });
   }
 
   Future<void> updatePostText(String postId, String text) async {
+    return _run('updatePostText', () async {
     await db.from('posts').update({'text': text}).eq('id', postId);
+  });
   }
 
   Future<void> deletePost(String postId) async {
+    return _run('deletePost', () async {
     await db.from('posts').delete().eq('id', postId);
+  });
   }
 
   Future<void> setLike(String postId, {required bool liked}) async {
+    return _run('setLike', () async {
     final me = uid;
     if (me == null) return;
     if (liked) {
@@ -389,9 +428,11 @@ class SupabaseRepository {
           .eq('post_id', postId)
           .eq('user_id', me);
     }
+  });
   }
 
   Future<void> setSave(String postId, {required bool saved}) async {
+    return _run('setSave', () async {
     final me = uid;
     if (me == null) return;
     if (saved) {
@@ -407,9 +448,11 @@ class SupabaseRepository {
           .eq('post_id', postId)
           .eq('user_id', me);
     }
+  });
   }
 
   Future<List<String>> fetchSavedPostIds() async {
+    return _run('fetchSavedPostIds', () async {
     final me = uid;
     if (me == null) return [];
     final rows = await db
@@ -418,6 +461,7 @@ class SupabaseRepository {
         .eq('user_id', me)
         .order('created_at', ascending: false);
     return (rows as List).map((r) => r['post_id'].toString()).toList();
+  });
   }
 
   // ---------------------------------------------------------------------------
@@ -426,6 +470,7 @@ class SupabaseRepository {
 
   /// Newest first. Each FeedModel has `parentkey` = post id.
   Future<List<FeedModel>> fetchComments(String postId) async {
+    return _run('fetchComments', () async {
     final rows = List<Map<String, dynamic>>.from(
       await db
           .from('comments')
@@ -458,6 +503,7 @@ class SupabaseRepository {
         user: profiles[authorId] ?? fallbackUser(authorId),
       );
     }).toList();
+  });
   }
 
   Future<String> addComment({
@@ -466,6 +512,7 @@ class SupabaseRepository {
     String? parentId,
     String? imageUrl,
   }) async {
+    return _run('addComment', () async {
     final me = uid;
     if (me == null) throw StateError('Not signed in');
     final row = await db
@@ -480,10 +527,13 @@ class SupabaseRepository {
         .select('id')
         .single();
     return row['id'].toString();
+  });
   }
 
   Future<void> deleteComment(String commentId) async {
+    return _run('deleteComment', () async {
     await db.from('comments').delete().eq('id', commentId);
+  });
   }
 
   // ---------------------------------------------------------------------------
@@ -494,6 +544,7 @@ class SupabaseRepository {
     String userId, {
     int limit = 100,
   }) async {
+    return _run('fetchNotifications', () async {
     final rows = await db
         .from('notifications')
         .select()
@@ -501,22 +552,27 @@ class SupabaseRepository {
         .order('created_at', ascending: false)
         .limit(limit);
     return List<Map<String, dynamic>>.from(rows);
+  });
   }
 
   Future<void> markNotificationsRead(String userId) async {
+    return _run('markNotificationsRead', () async {
     await db
         .from('notifications')
         .update({'read': true})
         .eq('user_id', userId)
         .eq('read', false);
+  });
   }
 
   Future<void> deleteNotificationsForPost(String userId, String postId) async {
+    return _run('deleteNotificationsForPost', () async {
     await db
         .from('notifications')
         .delete()
         .eq('user_id', userId)
         .eq('post_id', postId);
+  });
   }
 
   /// Mentions are not created by a trigger, so the client writes them.
@@ -525,6 +581,7 @@ class SupabaseRepository {
     required String postId,
     String? preview,
   }) async {
+    return _run('insertMentionNotification', () async {
     final me = uid;
     if (me == null || me == userId) return;
     final profile = await fetchUser(me);
@@ -538,6 +595,7 @@ class SupabaseRepository {
       'post_id': postId,
       'preview': preview,
     });
+  });
   }
 
   // ---------------------------------------------------------------------------
@@ -549,6 +607,7 @@ class SupabaseRepository {
     String me,
     String other,
   ) async {
+    return _run('fetchConversation', () async {
     final rows = await db
         .from('messages')
         .select()
@@ -556,10 +615,12 @@ class SupabaseRepository {
         .order('created_at', ascending: false)
         .limit(200);
     return List<Map<String, dynamic>>.from(rows);
+  });
   }
 
   /// Every message involving [me], newest first (used to build the inbox).
   Future<List<Map<String, dynamic>>> fetchInboxRows(String me) async {
+    return _run('fetchInboxRows', () async {
     final rows = await db
         .from('messages')
         .select()
@@ -567,12 +628,14 @@ class SupabaseRepository {
         .order('created_at', ascending: false)
         .limit(1000);
     return List<Map<String, dynamic>>.from(rows);
+  });
   }
 
   Future<Map<String, dynamic>> sendMessage({
     required String recipient,
     required String text,
   }) async {
+    return _run('sendMessage', () async {
     final me = uid;
     if (me == null) throw StateError('Not signed in');
     final row = await db
@@ -581,15 +644,18 @@ class SupabaseRepository {
         .select()
         .single();
     return Map<String, dynamic>.from(row);
+  });
   }
 
   Future<void> markConversationRead(String me, String other) async {
+    return _run('markConversationRead', () async {
     await db
         .from('messages')
         .update({'read_at': DateTime.now().toUtc().toIso8601String()})
         .eq('sender', other)
         .eq('recipient', me)
         .isFilter('read_at', null);
+  });
   }
 
   // ---------------------------------------------------------------------------
@@ -597,6 +663,7 @@ class SupabaseRepository {
   // ---------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> fetchUserSettings() async {
+    return _run('fetchUserSettings', () async {
     final me = uid;
     if (me == null) return {};
     final row = await db
@@ -605,9 +672,11 @@ class SupabaseRepository {
         .eq('user_id', me)
         .maybeSingle();
     return row == null ? {} : Map<String, dynamic>.from(row);
+  });
   }
 
   Future<void> upsertUserSettings(Map<String, dynamic> values) async {
+    return _run('upsertUserSettings', () async {
     final me = uid;
     if (me == null || values.isEmpty) return;
     await db.from('user_settings').upsert(
@@ -618,6 +687,7 @@ class SupabaseRepository {
       },
       onConflict: 'user_id',
     );
+  });
   }
 
   // ---------------------------------------------------------------------------
@@ -625,15 +695,17 @@ class SupabaseRepository {
   // ---------------------------------------------------------------------------
 
   Future<void> registerPushToken(String token, String platform) async {
+    return _run('registerPushToken', () async {
     if (uid == null) return;
     try {
       await db.rpc('swifly_register_push_token', params: {
         'p_token': token,
         'p_platform': platform,
       });
-    } catch (_) {
-      // Push is optional; the app keeps working without it.
+    } catch (error) {
+      showAppError(error, where: 'Register notifications');
     }
+  });
   }
 }
 
