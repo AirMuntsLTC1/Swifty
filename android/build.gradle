@@ -1,3 +1,21 @@
+// Set compileSdk 35 and fill a missing namespace for every Android plugin.
+// Older plugins (e.g. qr_code_scanner) have no namespace, which AGP 8 requires.
+subprojects {
+    afterEvaluate { proj ->
+        def ext = proj.extensions.findByName('android')
+        if (ext != null) {
+            ext.compileSdk = 35
+            if (ext.namespace == null) {
+                def manifest = proj.file('src/main/AndroidManifest.xml')
+                if (manifest.exists()) {
+                    def m = (manifest.text =~ /package="([^"]+)"/)
+                    if (m.find()) { ext.namespace = m.group(1) }
+                }
+            }
+        }
+    }
+}
+
 allprojects {
     repositories {
         google()
