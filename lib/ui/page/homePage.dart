@@ -115,8 +115,6 @@ class _HomePageState extends State<HomePage> {
     // Inbox subscription: other user is the same as me.
     chatState.databaseInit(authState.userId, authState.userId);
     chatState.getUserChatList(authState.userId);
-    authState.updateFCMToken();
-    chatState.getFCMServerKey();
   }
 
   Widget _body() {

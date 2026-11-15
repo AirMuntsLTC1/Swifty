@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:flutter_twitter_clone/helper/constant.dart';
@@ -15,13 +16,16 @@ import 'package:flutter_twitter_clone/state/appState.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/common/locator.dart';
 
-/// Activity list (likes, comments, follows, mentions). Stored in the
-/// `notifications` table; the database triggers create most rows.
+/// Activity list stored in `public.notifications`.
 class NotificationState extends AppState {
   List<UserModel> userList = [];
 
   List<NotificationModel>? _notificationList;
   RealtimeChannel? _channel;
+  String? _activeUserId;
+  Timer? _refreshTimer;
+  bool _loadingRows = false;
+  bool _reloadRequested = false;
 
   SupabaseRepository get _repo => SupabaseRepository.instance;
 
@@ -29,21 +33,29 @@ class NotificationState extends AppState {
     _notificationList ??= <NotificationModel>[];
     if (!_notificationList!.any((element) => element.id == model.id)) {
       _notificationList!.insert(0, model);
+      notifyListeners();
     }
   }
 
   List<NotificationModel>? get notificationList => _notificationList;
 
-  /// Subscribe to new notifications for [userId].
+  /// Subscribe once per signed-in account. INSERT creates visible activity;
+  /// DELETE removes it. Read-state UPDATEs are intentionally ignored to avoid
+  /// refetch loops when opening the notifications page marks rows as read.
   Future<bool> databaseInit(String userId) async {
+    if (userId.isEmpty) return false;
+    if (_activeUserId == userId && _channel != null) return true;
+
     try {
-      if (_channel != null) {
-        await _repo.db.removeChannel(_channel!);
-        _channel = null;
-      }
-      _channel = _repo.db.channel('notifications-$userId')
+      final previous = _channel;
+      _channel = null;
+      _activeUserId = userId;
+      if (previous != null) await _repo.db.removeChannel(previous);
+
+      final channel = _repo.db.channel('notifications-$userId');
+      _channel = channel
         ..onPostgresChanges(
-          event: PostgresChangeEvent.all,
+          event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'notifications',
           filter: PostgresChangeFilter(
@@ -51,11 +63,20 @@ class NotificationState extends AppState {
             column: 'user_id',
             value: userId,
           ),
-          callback: (_) {
-            getDataFromDatabase(userId, force: true);
-          },
+          callback: (_) => _queueRefresh(userId),
         )
-        ..subscribe();
+        ..onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'notifications',
+          callback: (_) => _queueRefresh(userId),
+        )
+        ..subscribe((status, error) {
+          debugPrint('Notifications Realtime [$userId]: $status${error == null ? '' : ' ($error)'}');
+          if (status == RealtimeSubscribeStatus.subscribed) {
+            getDataFromDatabase(userId, force: true);
+          }
+        });
       return true;
     } catch (error) {
       cprint(error, errorIn: 'databaseInit');
@@ -63,16 +84,40 @@ class NotificationState extends AppState {
     }
   }
 
+  void _queueRefresh(String userId) {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer(const Duration(milliseconds: 250), () {
+      if (_activeUserId == userId) {
+        getDataFromDatabase(userId, force: true);
+      }
+    });
+  }
+
   /// Load notifications. Likes are grouped by post and follows by user.
   Future<void> getDataFromDatabase(String userId, {bool force = false}) async {
+    if (userId.isEmpty || (_activeUserId != null && _activeUserId != userId)) {
+      return;
+    }
     if (_notificationList != null && !force) return;
+    if (_loadingRows) {
+      _reloadRequested = true;
+      return;
+    }
+
+    _loadingRows = true;
     isBusy = true;
     try {
-      final rows = await _repo.fetchNotifications(userId);
-      _notificationList = _group(rows);
+      do {
+        _reloadRequested = false;
+        final rows = await _repo.fetchNotifications(userId);
+        if (_activeUserId == null || _activeUserId == userId) {
+          _notificationList = _group(rows);
+        }
+      } while (_reloadRequested && _activeUserId == userId);
     } catch (error) {
       cprint(error, errorIn: 'getDataFromDatabase');
     } finally {
+      _loadingRows = false;
       isBusy = false;
       notifyListeners();
     }
@@ -82,35 +127,39 @@ class NotificationState extends AppState {
     final seen = <String>{};
     final result = <NotificationModel>[];
     for (final row in rows) {
-      final rawType = row['type']?.toString() ?? '';
+      final rawType = row['type']?.toString() ?? 'activity';
       final type = _typeFor(rawType);
       final postId = row['post_id']?.toString();
       final actorId = row['actor_id']?.toString() ?? '';
-      final isFollow = type == NotificationType.Follow.toString();
-
-      // Messages are shown in the chat tab, not here.
-      if (type == NotificationType.Message.toString()) continue;
+      final isFollow = rawType == 'follow';
       final isList = type == NotificationType.ListActivity.toString();
-      final listId = row['list_id']?.toString();
-      if (isList && listId == null) continue;
-      if (!isFollow && !isList && postId == null) continue;
+      final hasPost = postId != null && postId.isNotEmpty;
 
+      // Messages belong in the chat inbox, not the activity page.
+      if (rawType == 'message') continue;
+      final listId = row['list_id']?.toString();
+      if (isList && (listId == null || listId.isEmpty)) continue;
+
+      final genericActivity = !isFollow && !isList && !hasPost;
       final groupKey = isFollow
           ? 'follow:$actorId'
           : isList
               ? 'list:$listId:$actorId:$rawType'
-              : 'post:$postId:$type';
+              : hasPost
+                  ? 'post:$postId:$type'
+                  : 'activity:${row['id']}';
       if (!seen.add(groupKey)) continue;
 
       final createdAt = row['created_at']?.toString();
+      final actorName = (row['actor_name'] ?? row['actor_handle'] ?? 'Someone')
+          .toString();
+      final avatar = (row['avatar_url'] ?? '').toString();
       final data = isFollow
           ? <String, dynamic>{
               'userId': actorId,
-              'displayName': (row['actor_name'] ?? '').toString(),
+              'displayName': actorName,
               'userName': '@${(row['actor_handle'] ?? '').toString()}',
-              'profilePic': (row['avatar_url'] ?? '').toString().isNotEmpty
-                  ? row['avatar_url'].toString()
-                  : Constants.dummyProfilePic,
+              'profilePic': avatar.isNotEmpty ? avatar : Constants.dummyProfilePic,
               'bio': '',
               'isVerified': false,
             }
@@ -120,17 +169,26 @@ class NotificationState extends AppState {
                   'kind': rawType,
                   'listName': (row['preview'] ?? '').toString(),
                   'userId': actorId,
-                  'displayName': (row['actor_name'] ?? '').toString(),
-                  'profilePic': (row['avatar_url'] ?? '').toString().isNotEmpty
-                      ? row['avatar_url'].toString()
-                      : Constants.dummyProfilePic,
+                  'displayName': actorName,
+                  'profilePic': avatar.isNotEmpty ? avatar : Constants.dummyProfilePic,
                 }
-              : <String, dynamic>{};
+              : genericActivity
+                  ? <String, dynamic>{
+                      'genericActivity': true,
+                      'kind': rawType,
+                      'userId': actorId,
+                      'displayName': actorName,
+                      'userName': (row['actor_handle'] ?? '').toString(),
+                      'profilePic': avatar.isNotEmpty ? avatar : Constants.dummyProfilePic,
+                      'preview': (row['preview'] ?? '').toString(),
+                      'emoji': (row['emoji'] ?? '').toString(),
+                    }
+                  : <String, dynamic>{};
 
       result.add(NotificationModel(
         id: row['id'].toString(),
-        tweetKey: postId,
-        type: type,
+        tweetKey: hasPost ? postId : null,
+        type: genericActivity ? NotificationType.Tweet.toString() : type,
         createdAt: createdAt,
         updatedAt: createdAt,
         data: data,
@@ -165,11 +223,9 @@ class NotificationState extends AppState {
     }
   }
 
-  /// Get a post referenced by a notification.
   Future<FeedModel?> getTweetDetail(String tweetId) =>
       _repo.fetchPost(tweetId);
 
-  /// Get the user who liked / followed.
   Future<UserModel?> getUserDetail(String userId) async {
     final cached = userList.where((x) => x.userId == userId);
     if (cached.isNotEmpty) return cached.first;
@@ -178,7 +234,6 @@ class NotificationState extends AppState {
     return user;
   }
 
-  /// Remove the notifications for a post that was deleted or is not available.
   void removeNotification(String userId, String tweetkey) async {
     try {
       await _repo.deleteNotificationsForPost(userId, tweetkey);
@@ -189,21 +244,23 @@ class NotificationState extends AppState {
     }
   }
 
-  /// Start the push service once. Registers the device token.
+  /// Start FCM once after sign-in. This also registers the current device token.
   void initFirebaseService() {
     if (!getIt.isRegistered<PushNotificationService>()) {
-      getIt.registerSingleton<PushNotificationService>(
-          PushNotificationService());
+      getIt.registerSingleton<PushNotificationService>(PushNotificationService());
     }
   }
 
   @override
   void dispose() {
-    if (_channel != null) {
-      _repo.db.removeChannel(_channel!);
-      _channel = null;
-    }
+    _refreshTimer?.cancel();
+    final channel = _channel;
+    _channel = null;
+    _activeUserId = null;
+    if (channel != null) unawaited(_repo.db.removeChannel(channel));
     if (getIt.isRegistered<PushNotificationService>()) {
+      final service = getIt<PushNotificationService>();
+      unawaited(service.dispose());
       getIt.unregister<PushNotificationService>();
     }
     super.dispose();

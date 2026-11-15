@@ -1,5 +1,6 @@
-// Sends Firebase push for new notifications and direct or group messages.
-// Called by Supabase database webhooks (see README_FIRST.txt).
+// Sends Firebase push notifications for new activity rows and direct/group
+// messages. Configure Database Webhooks for INSERT on notifications and
+// messages; see README_REALTIME_PUSH_FIX.md.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -8,10 +9,17 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const WEBHOOK_SECRET = Deno.env.get("PUSH_WEBHOOK_SECRET") ?? "";
 const CHANNEL_ID = "swifs_social_notifications";
+const KIND_SWITCH: Record<string, string> = {
+  like: "like_notifications",
+  comment: "comment_notifications",
+  follow: "follow_notifications",
+  follow_request: "follow_notifications",
+  follow_accept: "follow_notifications",
+};
 
-const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
-
-// ---------- Google OAuth for FCM (service account, RS256 JWT) ----------
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+  auth: { persistSession: false },
+});
 
 let cached: { token: string; exp: number } | null = null;
 
@@ -34,6 +42,9 @@ function pemToDer(pem: string): ArrayBuffer {
 }
 
 async function accessToken(): Promise<string> {
+  if (!FCM_SA.client_email || !FCM_SA.private_key || !FCM_SA.project_id) {
+    throw new Error("FCM_SERVICE_ACCOUNT must be the Firebase service-account JSON with client_email, private_key and project_id");
+  }
   const now = Math.floor(Date.now() / 1000);
   if (cached && cached.exp - 60 > now) return cached.token;
 
@@ -46,7 +57,6 @@ async function accessToken(): Promise<string> {
     exp: now + 3600,
   }));
   const input = `${header}.${claims}`;
-
   const key = await crypto.subtle.importKey(
     "pkcs8",
     pemToDer(FCM_SA.private_key),
@@ -54,10 +64,13 @@ async function accessToken(): Promise<string> {
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(input));
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(input),
+  );
   const assertion = `${input}.${b64urlBytes(new Uint8Array(sig))}`;
-
-  const res = await fetch("https://oauth2.googleapis.com/token", {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -65,15 +78,17 @@ async function accessToken(): Promise<string> {
       assertion,
     }),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error("Google sign-in failed: " + JSON.stringify(json));
-  cached = { token: json.access_token, exp: now + Number(json.expires_in ?? 3600) };
+  const json = await response.json();
+  if (!response.ok || !json.access_token) {
+    throw new Error("Google OAuth token request failed: " + JSON.stringify(json));
+  }
+  cached = {
+    token: json.access_token,
+    exp: now + Number(json.expires_in ?? 3600),
+  };
   return cached.token;
 }
 
-// ---------- Helpers ----------
-
-/** Title and text for each activity kind. Titles match the in-app notifications. */
 function describe(kind: string, who: string): { title: string; body: string } {
   switch (kind) {
     case "follow": return { title: "New Follower", body: `${who} started following you` };
@@ -85,32 +100,28 @@ function describe(kind: string, who: string): { title: string; body: string } {
     case "story_reaction":
     case "reaction": return { title: "Story Reaction", body: `${who} reacted to your story` };
     case "story_reply": return { title: "Story Reply", body: `${who} replied to your story` };
+    case "list_add": return { title: "Added to a List", body: `${who} added you to a list` };
+    case "list_join": return { title: "New Member", body: `${who} joined your list` };
+    case "list_request": return { title: "Join Request", body: `${who} asked to join your list` };
+    case "list_request_accepted": return { title: "Request Accepted", body: `${who} accepted your request to join a list` };
+    case "list_post": return { title: "New List Post", body: `${who} posted in a list you are on` };
     default: return { title: "New Activity", body: `${who} sent you a notification` };
   }
 }
-
-/** Which user_settings switch controls each notification kind. Kinds not listed only need push_notifications. */
-const KIND_SWITCH: Record<string, string> = {
-  like: "like_notifications",
-  comment: "comment_notifications",
-  follow: "follow_notifications",
-  follow_request: "follow_notifications",
-  follow_accept: "follow_notifications",
-};
 
 async function allowedRecipients(ids: string[], sender: string | null): Promise<string[]> {
   let list = [...new Set(ids)].filter((id) => id && id !== sender);
   if (list.length === 0) return [];
 
-  // Users who blocked the sender, or whom the sender blocked, get nothing.
   if (sender) {
-    const { data: blocks } = await admin
+    const { data: blocks, error } = await admin
       .from("blocked_users")
       .select("blocker, blocked")
       .or(`blocker.eq.${sender},blocked.eq.${sender}`);
+    if (error) throw error;
     const blocked = new Set<string>();
-    for (const b of blocks ?? []) {
-      blocked.add(b.blocker === sender ? b.blocked : b.blocker);
+    for (const row of blocks ?? []) {
+      blocked.add(row.blocker === sender ? row.blocked : row.blocker);
     }
     list = list.filter((id) => !blocked.has(id));
   }
@@ -118,24 +129,34 @@ async function allowedRecipients(ids: string[], sender: string | null): Promise<
 }
 
 async function settingsFor(ids: string[]) {
-  const { data } = await admin
+  const { data, error } = await admin
     .from("user_settings")
     .select("user_id, push_notifications, like_notifications, comment_notifications, follow_notifications")
     .in("user_id", ids);
+  if (error) throw error;
   return new Map((data ?? []).map((row) => [row.user_id, row]));
 }
 
-async function sendTo(tokens: { token: string; user_id: string }[], title: string, body: string, data: Record<string, string>) {
-  if (tokens.length === 0) return { sent: 0, removed: 0 };
+async function sendTo(
+  tokens: { token: string; user_id: string }[],
+  title: string,
+  body: string,
+  data: Record<string, string>,
+) {
+  if (tokens.length === 0) return { sent: 0, failed: 0, removed: 0 };
   const access = await accessToken();
   const url = `https://fcm.googleapis.com/v1/projects/${FCM_SA.project_id}/messages:send`;
   let sent = 0;
+  let failed = 0;
   let removed = 0;
 
   await Promise.all(tokens.map(async ({ token }) => {
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
-      headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${access}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         message: {
           token,
@@ -143,108 +164,148 @@ async function sendTo(tokens: { token: string; user_id: string }[], title: strin
           data,
           android: {
             priority: "HIGH",
-            notification: { channel_id: CHANNEL_ID, tag: data.tag ?? undefined },
+            notification: {
+              channel_id: CHANNEL_ID,
+              tag: data.tag ?? undefined,
+              sound: "default",
+            },
           },
         },
       }),
     });
-    if (res.ok) {
+
+    if (response.ok) {
       sent++;
       return;
     }
-    const text = await res.text();
-    // The phone uninstalled the app or the token expired: forget it.
-    if (text.includes("UNREGISTERED") || text.includes("INVALID_ARGUMENT")) {
-      await admin.from("user_devices").delete().eq("token", token);
-      removed++;
+
+    const responseText = await response.text();
+    failed++;
+    // Remove only tokens explicitly reported as unregistered. INVALID_ARGUMENT
+    // may indicate a malformed payload and must not erase a valid device token.
+    if (responseText.includes("UNREGISTERED")) {
+      const { error } = await admin.from("user_devices").delete().eq("token", token);
+      if (error) console.error("Could not remove stale FCM token", error);
+      else removed++;
     } else {
-      console.error("FCM error", res.status, text);
+      console.error("FCM send failed", response.status, responseText);
     }
   }));
-  return { sent, removed };
+  return { sent, failed, removed };
 }
 
-// ---------- Entry point ----------
-
-Deno.serve(async (req) => {
-  if (WEBHOOK_SECRET && req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
-    return new Response("forbidden", { status: 403 });
-  }
-
-  const payload = await req.json();
-  if (payload.type !== "INSERT") return Response.json({ skipped: "not an insert" });
-
-  const record = payload.record ?? {};
-  let recipients: string[] = [];
-  let sender: string | null = null;
-  let title = "Swifs";
-  let body = "";
-  let data: Record<string, string> = {};
-  let kind = "";
-
-  if (payload.table === "notifications") {
-    // DMs are pushed from the messages table below, so skip the duplicate row here.
-    if (record.type === "message") return Response.json({ skipped: "message row" });
-    kind = String(record.type ?? "");
-    recipients = [record.user_id];
-    sender = record.actor_id ?? null;
-    const copy = describe(kind, record.actor_name || record.actor_handle || "Someone");
-    title = copy.title;
-    body = copy.body;
-    // Same tag the phone uses for realtime alerts, so one activity shows once.
-    data = { kind, tag: `activity-${record.id}` };
-  } else if (payload.table === "messages") {
-    sender = record.sender ?? null;
-    const { data: senderRow } = await admin
-      .from("profiles")
-      .select("display_name, username")
-      .eq("id", sender)
-      .maybeSingle();
-    const who = senderRow?.display_name || senderRow?.username || "Someone";
-
-    if (record.group_id) {
-      const { data: members } = await admin
-        .from("group_members")
-        .select("user_id")
-        .eq("group_id", record.group_id);
-      recipients = (members ?? []).map((m) => m.user_id);
-      const { data: group } = await admin
-        .from("groups")
-        .select("name")
-        .eq("id", record.group_id)
-        .maybeSingle();
-      title = group?.name || "Group message";
-    } else {
-      recipients = [record.recipient];
+Deno.serve(async (request) => {
+  try {
+    if (request.method !== "POST") {
+      return Response.json({ error: "method_not_allowed" }, { status: 405 });
+    }
+    if (WEBHOOK_SECRET && request.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
+      return new Response("forbidden", { status: 403 });
     }
 
-    const preview = (record.text ?? "").toString().trim();
-    body = preview ? `${who}: ${preview}` : `${who} sent you a message`;
-    data = { kind: "message", tag: `message-${record.id}` };
-  } else {
-    return Response.json({ skipped: `unknown table ${payload.table}` });
+    const payload = await request.json();
+    if (payload.type !== "INSERT") {
+      return Response.json({ skipped: "not_an_insert" });
+    }
+
+    const record = payload.record ?? {};
+    let recipients: string[] = [];
+    let sender: string | null = null;
+    let title = "Swifs";
+    let body = "";
+    let data: Record<string, string> = {};
+    let kind = "";
+
+    if (payload.schema !== "public") {
+      return Response.json({ skipped: "not_public_schema" });
+    }
+
+    if (payload.table === "notifications") {
+      // Direct messages are pushed from messages INSERT to avoid duplicates.
+      if (record.type === "message") return Response.json({ skipped: "message_row" });
+      kind = String(record.type ?? "activity");
+      recipients = record.user_id ? [String(record.user_id)] : [];
+      sender = record.actor_id ? String(record.actor_id) : null;
+      const copy = describe(kind, record.actor_name || record.actor_handle || "Someone");
+      title = copy.title;
+      body = copy.body;
+      data = {
+        kind,
+        tag: `activity-${String(record.id ?? crypto.randomUUID())}`,
+        notification_id: String(record.id ?? ""),
+        sender_id: sender ?? "",
+        actor_id: sender ?? "",
+        post_id: record.post_id ? String(record.post_id) : "",
+      };
+    } else if (payload.table === "messages") {
+      sender = record.sender ? String(record.sender) : null;
+      if (!sender) return Response.json({ skipped: "message_without_sender" });
+
+      const { data: senderRow, error: profileError } = await admin
+        .from("profiles")
+        .select("display_name, username")
+        .eq("id", sender)
+        .maybeSingle();
+      if (profileError) throw profileError;
+      const who = senderRow?.display_name || senderRow?.username || "Someone";
+
+      if (record.group_id) {
+        const { data: members, error: memberError } = await admin
+          .from("group_members")
+          .select("user_id")
+          .eq("group_id", record.group_id);
+        if (memberError) throw memberError;
+        recipients = (members ?? []).map((member) => String(member.user_id));
+        const { data: group, error: groupError } = await admin
+          .from("groups")
+          .select("name")
+          .eq("id", record.group_id)
+          .maybeSingle();
+        if (groupError) throw groupError;
+        title = group?.name || "Group message";
+      } else {
+        recipients = record.recipient ? [String(record.recipient)] : [];
+        title = who;
+      }
+
+      const preview = String(record.text ?? "").trim();
+      body = preview ? `${who}: ${preview}` : `${who} sent you a message`;
+      data = {
+        kind: "message",
+        tag: `message-${String(record.id ?? crypto.randomUUID())}`,
+        message_id: String(record.id ?? ""),
+        sender_id: sender,
+        recipient_id: record.recipient ? String(record.recipient) : "",
+        group_id: record.group_id ? String(record.group_id) : "",
+      };
+    } else {
+      return Response.json({ skipped: `unknown_table_${String(payload.table)}` });
+    }
+
+    const allowed = await allowedRecipients(recipients, sender);
+    if (allowed.length === 0) return Response.json({ sent: 0, reason: "no_allowed_recipients" });
+
+    const settings = await settingsFor(allowed);
+    const switchName = KIND_SWITCH[kind];
+    const wanted = allowed.filter((id) => {
+      const setting = settings.get(id);
+      if (!setting) return true;
+      if (setting.push_notifications === false) return false;
+      if (switchName && setting[switchName] === false) return false;
+      return true;
+    });
+    if (wanted.length === 0) return Response.json({ sent: 0, reason: "disabled_by_settings" });
+
+    const { data: devices, error: deviceError } = await admin
+      .from("user_devices")
+      .select("token, user_id")
+      .in("user_id", wanted);
+    if (deviceError) throw deviceError;
+
+    const result = await sendTo(devices ?? [], title, body, data);
+    return Response.json(result);
+  } catch (error) {
+    console.error("push-notify failed", error);
+    return Response.json({ error: "push_delivery_failed" }, { status: 500 });
   }
-
-  const allowed = await allowedRecipients(recipients, sender);
-  if (allowed.length === 0) return Response.json({ sent: 0 });
-
-  // Honour the user's notification switches. A missing row means "on".
-  const settings = await settingsFor(allowed);
-  const switchName = KIND_SWITCH[kind];
-  const wanted = allowed.filter((id) => {
-    const s = settings.get(id);
-    if (!s) return true;
-    if (s.push_notifications === false) return false;
-    if (switchName && s[switchName] === false) return false;
-    return true;
-  });
-  if (wanted.length === 0) return Response.json({ sent: 0 });
-
-  const { data: devices } = await admin
-    .from("user_devices")
-    .select("token, user_id")
-    .in("user_id", wanted);
-
-  const result = await sendTo(devices ?? [], title, body, data);
-  return Response.json(result);
 });

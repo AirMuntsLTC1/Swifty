@@ -5,6 +5,7 @@ import 'package:flutter_twitter_clone/model/notificationModel.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
 import 'package:flutter_twitter_clone/state/notificationState.dart';
 import 'package:flutter_twitter_clone/state/badgeState.dart';
+import 'package:flutter_twitter_clone/ui/page/notification/widget/activity_notification_tile.dart';
 import 'package:flutter_twitter_clone/ui/page/notification/widget/follow_notification_tile.dart';
 import 'package:flutter_twitter_clone/ui/page/notification/widget/list_add_notification_tile.dart';
 import 'package:flutter_twitter_clone/ui/page/notification/widget/post_like_tile.dart';
@@ -18,7 +19,6 @@ class NotificationPage extends StatefulWidget {
   const NotificationPage({Key? key, required this.scaffoldKey})
       : super(key: key);
 
-  /// scaffoldKey used to open sidebar drawer
   final GlobalKey<ScaffoldState> scaffoldKey;
 
   @override
@@ -30,9 +30,11 @@ class _NotificationPageState extends State<NotificationPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      var state = Provider.of<NotificationState>(context, listen: false);
-      var authState = Provider.of<AuthState>(context, listen: false);
-      state.getDataFromDatabase(authState.userId);
+      if (!mounted) return;
+      final state = Provider.of<NotificationState>(context, listen: false);
+      final authState = Provider.of<AuthState>(context, listen: false);
+      state.databaseInit(authState.userId);
+      state.getDataFromDatabase(authState.userId, force: true);
       Provider.of<BadgeState>(context, listen: false).clearNotifications();
     });
   }
@@ -47,9 +49,7 @@ class _NotificationPageState extends State<NotificationPage> {
       backgroundColor: TwitterColor.mystic,
       appBar: CustomAppBar(
         scaffoldKey: widget.scaffoldKey,
-        title: customTitleText(
-          'Notifications',
-        ),
+        title: customTitleText('Notifications'),
         icon: AppIcon.settings,
         onActionPressed: onSettingIconPressed,
       ),
@@ -62,16 +62,21 @@ class NotificationPageBody extends StatelessWidget {
   const NotificationPageBody({Key? key}) : super(key: key);
 
   Widget _notificationRow(BuildContext context, NotificationModel model) {
-    var state = Provider.of<NotificationState>(context);
+    final state = Provider.of<NotificationState>(context);
+    final data = model.data ?? <String, dynamic>{};
+    if (data['genericActivity'] == true) {
+      return ActivityNotificationTile(model: model);
+    }
     if (model.type == NotificationType.ListActivity.toString()) {
       return ListAddNotificationTile(model: model);
     }
     if (model.type == NotificationType.Follow.toString()) {
-      return FollowNotificationTile(
-        model: model,
-      );
+      return FollowNotificationTile(model: model);
     }
-    return FutureBuilder(
+    if (model.tweetKey == null) {
+      return ActivityNotificationTile(model: model);
+    }
+    return FutureBuilder<FeedModel?>(
       future: state.getTweetDetail(model.tweetKey!),
       builder: (BuildContext context, AsyncSnapshot<FeedModel?> snapshot) {
         if (snapshot.hasData) {
@@ -83,8 +88,7 @@ class NotificationPageBody extends StatelessWidget {
             child: LinearProgressIndicator(),
           );
         } else {
-          /// remove notification from firebase db if tweet in not available or deleted.
-          var authState = Provider.of<AuthState>(context);
+          final authState = Provider.of<AuthState>(context, listen: false);
           state.removeNotification(authState.userId, model.tweetKey!);
           return const SizedBox();
         }
@@ -94,14 +98,15 @@ class NotificationPageBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var state = Provider.of<NotificationState>(context);
-    var list = state.notificationList;
+    final state = Provider.of<NotificationState>(context);
+    final list = state.notificationList;
     if (state.isbusy) {
       return const SizedBox(
         height: 3,
         child: LinearProgressIndicator(),
       );
-    } else if (list == null || list.isEmpty) {
+    }
+    if (list == null || list.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 30),
         child: EmptyList(
