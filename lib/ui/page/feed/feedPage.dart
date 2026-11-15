@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_twitter_clone/widgets/ads/ad_slot.dart';
 import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
@@ -74,6 +75,36 @@ class _FeedPageBody extends StatelessWidget {
       {Key? key, required this.scaffoldKey, this.refreshIndicatorKey})
       : super(key: key);
 
+  /// Feed rows: each post, with an ad slot after posts 3, 9, 15, and so on.
+  /// Slots with no active campaign and no AdMob render nothing.
+  List<Widget> _feedRows(BuildContext context, List<FeedModel> list) {
+    final rows = <Widget>[];
+    var adSlot = 0;
+    for (var i = 0; i < list.length; i++) {
+      final model = list[i];
+      rows.add(
+        Container(
+          color: Colors.white,
+          child: Tweet(
+            model: model,
+            trailing: TweetBottomSheet().tweetOptionIcon(
+              context,
+              model: model,
+              type: TweetType.Tweet,
+              scaffoldKey: scaffoldKey,
+            ),
+            scaffoldKey: scaffoldKey,
+          ),
+        ),
+      );
+      if ((i + 1) >= 3 && ((i + 1) - 3) % kAdEvery == 0) {
+        rows.add(AdSlot(key: ValueKey('feed-ad-$adSlot'), slotIndex: adSlot));
+        adSlot++;
+      }
+    }
+    return rows;
+  }
+
   @override
   Widget build(BuildContext context) {
     var authState = Provider.of<AuthState>(context, listen: false);
@@ -104,22 +135,7 @@ class _FeedPageBody extends StatelessWidget {
                       )
                     : SliverList(
                         delegate: SliverChildListDelegate(
-                          list!.map(
-                            (model) {
-                              return Container(
-                                color: Colors.white,
-                                child: Tweet(
-                                  model: model,
-                                  trailing: TweetBottomSheet().tweetOptionIcon(
-                                      context,
-                                      model: model,
-                                      type: TweetType.Tweet,
-                                      scaffoldKey: scaffoldKey),
-                                  scaffoldKey: scaffoldKey,
-                                ),
-                              );
-                            },
-                          ).toList(),
+                          _feedRows(context, list!),
                         ),
                       )
           ],

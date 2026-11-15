@@ -5,6 +5,7 @@
 //   2. Trending capsules: swipeable decks built from trending tags.
 //   3. Explore grid: For you (newest) or Trending (most liked).
 import 'package:flutter/material.dart';
+import 'package:flutter_twitter_clone/widgets/ads/ad_slot.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -312,19 +313,41 @@ class _MomentsPageState extends State<MomentsPage> {
         ),
       );
     }
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      sliver: SliverGrid.count(
-        crossAxisCount: 2,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 0.8,
-        children: [
-          for (var i = 0; i < _explore.length; i++)
-            MomentTile(post: _explore[i], onTap: () => _openExplore(i)),
-        ],
-      ),
-    );
+    // After every kAdEvery tiles, a full-width ad: your campaigns first,
+    // then Google AdMob. Nothing is shown when neither is available.
+    final groups = <Widget>[];
+    for (var start = 0; start < _explore.length; start += kAdEvery) {
+      final end = start + kAdEvery > _explore.length
+          ? _explore.length
+          : start + kAdEvery;
+      groups.add(
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverGrid.count(
+            crossAxisCount: 2,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.8,
+            children: [
+              for (var i = start; i < end; i++)
+                MomentTile(post: _explore[i], onTap: () => _openExplore(i)),
+            ],
+          ),
+        ),
+      );
+      groups.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 4),
+            child: AdSlot(
+              key: ValueKey('moments-ad-${start ~/ kAdEvery}'),
+              slotIndex: start ~/ kAdEvery,
+            ),
+          ),
+        ),
+      );
+    }
+    return SliverMainAxisGroup(slivers: groups);
   }
 }
 

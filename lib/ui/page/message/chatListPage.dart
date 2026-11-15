@@ -203,6 +203,16 @@ class _ChatListPageState extends State<ChatListPage> {
         ),
       );
     }
+    if (list.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 30),
+        child: EmptyList(
+          'No messages yet',
+          subTitle:
+              'Your conversations will show up here. Tap the message button to start one.',
+        ),
+      );
+    }
     return ListView.separated(
       physics: const BouncingScrollPhysics(),
       itemCount: list.length,

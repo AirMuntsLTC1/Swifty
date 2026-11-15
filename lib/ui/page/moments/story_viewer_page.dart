@@ -1,10 +1,14 @@
 // lib/ui/page/moments/story_viewer_page.dart
 //
-// Full-screen Moment viewer.
-//   - Tap right or left to skip forward or back. Long-press to pause.
-//   - Progress bars across the top, one per story from the same person.
-//   - Viewers: emoji reactions (with a floating burst) and a reply box.
-//   - Owners: live view count, reaction counts, and live reaction bursts.
+// Full-screen Moment viewer, like Facebook and TikTok stories.
+//   - Tap the right third to skip forward, the left third to go back.
+//     On the first story, tapping left closes the viewer.
+//   - Long-press to pause. Release to continue.
+//   - Swipe down to close. Stories close automatically at the end.
+//   - No play, pause or volume controls on videos.
+//   - Right side: heart (like), comment (opens the reply box) and retweet
+//     (repost), with counts, like on the feed.
+//   - Viewers: emoji reactions and a reply box. Owners: views and reactions.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -14,9 +18,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/model/moment_models.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_moments_repository.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_story_engagement.dart';
 import 'package:flutter_twitter_clone/ui/page/moments/moments_widgets.dart';
+import 'package:flutter_twitter_clone/ui/page/moments/story_video.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
-import 'package:flutter_twitter_clone/widgets/video/post_video_player.dart';
 
 class StoryViewerPage extends StatefulWidget {
   const StoryViewerPage({
@@ -46,7 +51,6 @@ class StoryViewerPage extends StatefulWidget {
 
 class _StoryViewerPageState extends State<StoryViewerPage>
     with SingleTickerProviderStateMixin {
-
   final MomentsRepository _repo = MomentsRepository.instance;
   final GlobalKey<EmojiBurstLayerState> _burstKey =
       GlobalKey<EmojiBurstLayerState>();
@@ -66,6 +70,8 @@ class _StoryViewerPageState extends State<StoryViewerPage>
   bool _typing = false;
   bool _sending = false;
   StoryStats? _stats;
+  StoryEngagement? _engagement;
+  String? _engagementStoryId;
   final Map<String, String> _sentReactions = <String, String>{};
   RealtimeChannel? _channel;
   String? _channelStoryId;
@@ -109,8 +115,13 @@ class _StoryViewerPageState extends State<StoryViewerPage>
       _repo.markViewed(story.id).catchError((_) {});
     }
     _syncChannel(story, mine);
-    setState(() => _stats = null);
+    setState(() {
+      _stats = null;
+      _engagement = null;
+      _engagementStoryId = null;
+    });
     if (mine) _loadStats(story.id);
+    _loadEngagement(story.id);
   }
 
   void _next() {
@@ -124,7 +135,8 @@ class _StoryViewerPageState extends State<StoryViewerPage>
       });
       _enterStory();
     } else {
-      Navigator.of(context).maybePop();
+      // Last story of the last person: close automatically.
+      _close();
     }
   }
 
@@ -139,9 +151,13 @@ class _StoryViewerPageState extends State<StoryViewerPage>
       });
       _enterStory();
     } else {
-      // First story of the first person: restart it.
-      _startProgressFor(_story);
+      // First story of the first person: there is nothing before it, so close.
+      _close();
     }
+  }
+
+  void _close() {
+    if (mounted) Navigator.of(context).maybePop();
   }
 
   void _onTapUp(TapUpDetails details) {
@@ -167,7 +183,7 @@ class _StoryViewerPageState extends State<StoryViewerPage>
   /// Pause while the finger is down or the reply box is open.
   void _syncPlayback() {
     if (_videoMode) {
-      // The video is paused from the body (it reads _paused). Its bar stops too.
+      // The video reads _paused in build and pauses itself.
       setState(() {});
       return;
     }
@@ -222,7 +238,7 @@ class _StoryViewerPageState extends State<StoryViewerPage>
   }
 
   // ---------------------------------------------------------------------------
-  // Reactions, replies, owner stats
+  // Reactions, replies, likes, reposts, owner stats
   // ---------------------------------------------------------------------------
 
   void _react(String emoji) {
@@ -257,6 +273,53 @@ class _StoryViewerPageState extends State<StoryViewerPage>
       final stats = await _repo.fetchStats(storyId);
       if (mounted && _story.id == storyId) setState(() => _stats = stats);
     } catch (_) {}
+  }
+
+  Future<void> _loadEngagement(String storyId) async {
+    try {
+      final engagement = await StoryEngagementRepository.fetch(storyId);
+      if (mounted && _story.id == storyId) {
+        setState(() {
+          _engagement = engagement;
+          _engagementStoryId = storyId;
+        });
+      }
+    } catch (_) {}
+  }
+
+  /// Like or unlike. The count updates at once and is put back if saving fails.
+  Future<void> _toggleLike() async {
+    final story = _story;
+    final current = _engagement;
+    if (current == null || _engagementStoryId != story.id) return;
+    final on = !current.liked;
+    setState(() => _engagement =
+        current.copyWith(liked: on, likes: current.likes + (on ? 1 : -1)));
+    try {
+      await StoryEngagementRepository.setLike(story.id, on);
+    } catch (_) {
+      if (mounted && _story.id == story.id) setState(() => _engagement = current);
+    }
+  }
+
+  /// Repost or undo a repost. Same behaviour as the like button.
+  Future<void> _toggleRepost() async {
+    final story = _story;
+    final current = _engagement;
+    if (current == null || _engagementStoryId != story.id) return;
+    final on = !current.reposted;
+    setState(() => _engagement = current.copyWith(
+        reposted: on, reposts: current.reposts + (on ? 1 : -1)));
+    try {
+      await StoryEngagementRepository.setRepost(story.id, on);
+    } catch (_) {
+      if (mounted && _story.id == story.id) setState(() => _engagement = current);
+    }
+  }
+
+  /// Comment button: open the reply box, which pauses the story.
+  void _focusReply() {
+    _replyFocus.requestFocus();
   }
 
   Future<void> _deleteStory(MomentStory story) async {
@@ -305,6 +368,9 @@ class _StoryViewerPageState extends State<StoryViewerPage>
               onTapUp: _onTapUp,
               onLongPressStart: (_) => _setHolding(true),
               onLongPressEnd: (_) => _setHolding(false),
+              onVerticalDragEnd: (details) {
+                if ((details.primaryVelocity ?? 0) > 300) _close();
+              },
               child: _StoryBody(
                 story: story,
                 paused: _paused,
@@ -332,6 +398,11 @@ class _StoryViewerPageState extends State<StoryViewerPage>
             ),
           ),
           Positioned.fill(child: EmojiBurstLayer(key: _burstKey)),
+          Positioned(
+            right: 10,
+            bottom: ring.isMine ? 120 : 176,
+            child: _actionRail(),
+          ),
           Positioned(
             left: 0,
             right: 0,
@@ -375,12 +446,78 @@ class _StoryViewerPageState extends State<StoryViewerPage>
             ],
           ),
         ),
-        IconButton(
-          icon: const Icon(LucideIcons.x, color: Colors.white),
-          onPressed: () => Navigator.of(context).maybePop(),
+      ],
+    );
+  }
+
+  /// Right-side actions, like the TikTok and feed buttons.
+  Widget _actionRail() {
+    final e = _engagement;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _railButton(
+          icon: LucideIcons.heart,
+          count: e?.likes,
+          active: e?.liked ?? false,
+          activeColor: Colors.red,
+          onTap: _toggleLike,
+        ),
+        const SizedBox(height: 18),
+        _railButton(
+          icon: LucideIcons.messageCircle,
+          count: e?.comments,
+          onTap: _focusReply,
+        ),
+        const SizedBox(height: 18),
+        _railButton(
+          icon: LucideIcons.repeat2,
+          count: e?.reposts,
+          active: e?.reposted ?? false,
+          activeColor: Colors.green,
+          onTap: _toggleRepost,
         ),
       ],
     );
+  }
+
+  Widget _railButton({
+    required IconData icon,
+    int? count,
+    bool active = false,
+    Color activeColor = Colors.red,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedScale(
+            scale: active ? 1.15 : 1,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutBack,
+            child: Icon(
+              icon,
+              size: 30,
+              color: active ? activeColor : Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            count == null ? '' : _shortCount(count),
+            style: momentTitle(size: 12, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _shortCount(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return '$n';
   }
 
   Widget _viewerFooter(MomentStory story) {
@@ -494,7 +631,7 @@ class _StoryViewerPageState extends State<StoryViewerPage>
   }
 }
 
-/// The picture or text of one story. Photos keep the scale, offset and
+/// The picture, video or text of one story. Photos keep the scale, offset and
 /// rotation saved when the story was made.
 class _StoryBody extends StatelessWidget {
   const _StoryBody({
@@ -520,28 +657,20 @@ class _StoryBody extends StatelessWidget {
       return Stack(
         fit: StackFit.expand,
         children: [
-          Container(color: Colors.black),
-          Center(
-            child: PostVideoPlayer(
-              url: url,
-              thumbnailUrl: story.thumbnailUrl,
-              aspectRatio: MediaQuery.of(context).size.aspectRatio,
-              borderRadius: 0,
-              fit: BoxFit.cover,
-              autoPlayWhenVisible: true,
-              startMuted: false,
-              looping: false,
-              paused: paused,
-              maxPlayback: kStoryVideoMaxLength,
-              onDuration: onVideoDuration,
-              onPosition: onVideoPosition,
-              onError: onVideoError,
-            ),
+          StoryVideo(
+            key: ValueKey('video-${story.id}'),
+            url: url,
+            thumbnailUrl: story.thumbnailUrl,
+            paused: paused,
+            maxLength: kStoryVideoMaxLength,
+            onDuration: onVideoDuration,
+            onPosition: onVideoPosition,
+            onError: onVideoError,
           ),
           if (caption != null)
             Positioned(
               left: 24,
-              right: 24,
+              right: 80,
               bottom: 200,
               child: Text(
                 caption,
@@ -571,7 +700,7 @@ class _StoryBody extends StatelessWidget {
           if (caption != null)
             Positioned(
               left: 24,
-              right: 24,
+              right: 80,
               bottom: 200,
               child: Text(
                 caption,
@@ -595,7 +724,3 @@ class _StoryBody extends StatelessWidget {
     );
   }
 }
-
-
-
-
