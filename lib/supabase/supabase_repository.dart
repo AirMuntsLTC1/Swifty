@@ -14,6 +14,7 @@ import 'package:flutter_twitter_clone/helper/app_error.dart';
 import 'package:flutter_twitter_clone/helper/constant.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
+import 'package:flutter_twitter_clone/model/swifly_list.dart';
 
 const String kPostMediaBucket = 'post-media';
 const String kAvatarBucket = 'avatars';
@@ -44,7 +45,7 @@ String mimeForExtension(String ext) {
 }
 
 const String _postSelect =
-    'id, author_id, text, audience, tagged_handles, likes, saves, shares, created_at, views';
+    'id, author_id, text, audience, tagged_handles, likes, saves, shares, created_at, views, list_id';
 
 class SupabaseRepository {
   SupabaseRepository._();
@@ -401,11 +402,23 @@ class SupabaseRepository {
     final authorIds =
         posts.map((e) => e['author_id'].toString()).toSet().toList();
 
+    final listIds = posts
+        .map((row) => row['list_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
     final results = await Future.wait<dynamic>([
       db.from('profiles').select().inFilter('id', authorIds),
       db.from('post_media').select().inFilter('post_id', ids).order('position'),
       db.from('post_likes').select('post_id, user_id').inFilter('post_id', ids),
       db.from('comments').select('id, post_id').inFilter('post_id', ids),
+      listIds.isEmpty
+          ? Future.value(<dynamic>[])
+          : db
+              .from('lists')
+              .select('id, owner_id, name, description, icon, cover_url, is_private, member_count, follower_count, created_at')
+              .inFilter('id', listIds),
     ]);
 
     final profiles = _profileMap(results[0] as List);
@@ -432,6 +445,12 @@ class SupabaseRepository {
           .add(c['id'].toString());
     }
 
+    final lists = <String, SwiflyList>{};
+    for (final row in (results[4] as List)) {
+      final list = SwiflyList.fromRow(Map<String, dynamic>.from(row as Map));
+      lists[list.id] = list;
+    }
+
     return posts.map((row) {
       final id = row['id'].toString();
       final authorId = row['author_id'].toString();
@@ -450,6 +469,10 @@ class SupabaseRepository {
         imagePath: media[id],
         tags: List<String>.from((row['tagged_handles'] as List?) ?? const []),
         user: profiles[authorId] ?? fallbackUser(authorId),
+        listId: (row['list_id'] ?? '').toString().isEmpty
+            ? null
+            : row['list_id'].toString(),
+        attachedList: lists[(row['list_id'] ?? '').toString()],
       );
     }).toList();
   });
@@ -462,6 +485,7 @@ class SupabaseRepository {
     List<String> tags = const [],
     String? imageUrl,
     String audience = 'everyone',
+    String? listId,
   }) async {
     return _run('createPost', () async {
     final me = uid;
@@ -472,6 +496,7 @@ class SupabaseRepository {
       'p_tags': tags,
       'p_image_url':
           (imageUrl != null && imageUrl.isNotEmpty) ? imageUrl : null,
+      'p_list_id': listId,
     });
     return id.toString();
   });
@@ -818,6 +843,8 @@ class SupabaseRepository {
   });
   }
 }
+
+
 
 
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
+import 'package:flutter_twitter_clone/ui/page/lists/list_common.dart';
+import 'package:flutter_twitter_clone/ui/page/lists/listDetailPage.dart';
 import 'package:flutter_twitter_clone/state/feedState.dart';
 import 'package:flutter_twitter_clone/ui/page/feed/feedPostDetail.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/profilePage.dart';
@@ -18,6 +20,18 @@ import '../customWidgets.dart';
 import 'widgets/retweetWidget.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'widgets/tweetImage.dart';
+
+Widget _buildListPostAttachment(BuildContext context, FeedModel post) {
+  final list = post.attachedList;
+  if (list == null) return const SizedBox.shrink();
+  return Padding(
+    padding: const EdgeInsets.only(top: 12, right: 4),
+    child: ListPostAttachment(
+      list: list,
+      onTap: () => Navigator.push(context, ListDetailPage.getRoute(list.id)),
+    ),
+  );
+}
 
 class Tweet extends StatelessWidget {
   final FeedModel model;
@@ -290,6 +304,8 @@ class _TweetBody extends StatelessWidget {
                     ),
               if (model.imagePath == null && model.description != null)
                 CustomLinkMediaInfo(text: model.description!),
+              if (model.attachedList != null)
+                _buildListPostAttachment(context, model),
             ],
           ),
         ),
@@ -412,7 +428,12 @@ class _TweetDetailBody extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: CustomLinkMediaInfo(text: model.description!),
-                )
+                ),
+              if (model.attachedList != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildListPostAttachment(context, model),
+                ),
             ],
           ),
         ),
@@ -420,5 +441,7 @@ class _TweetDetailBody extends StatelessWidget {
     );
   }
 }
+
+
 
 

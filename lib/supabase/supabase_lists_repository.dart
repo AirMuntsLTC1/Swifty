@@ -71,7 +71,7 @@ class SwiflyListsRepository {
 
   static const String _postColumns =
       'id, author_id, text, audience, tagged_handles, likes, saves, shares, '
-      'created_at, views';
+      'created_at, views, list_id';
 
   Future<T> _run<T>(String where, Future<T> Function() op) async {
     try {
@@ -484,3 +484,5 @@ class SwiflyListsRepository {
         () => SupabaseRepository.instance.uploadFile(kCoversBucket, file),
       );
 }
+
+

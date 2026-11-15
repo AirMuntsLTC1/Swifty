@@ -8,10 +8,16 @@ import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 /// Join, Request, Requested or Joined, depending on the list and your status.
 /// Public lists join at once; private lists send a request to the admins.
 class ListJoinButton extends StatelessWidget {
-  const ListJoinButton({super.key, required this.list, required this.onChanged});
+  const ListJoinButton({
+    super.key,
+    required this.list,
+    required this.onChanged,
+    this.compact = false,
+  });
 
   final SwiflyList list;
   final VoidCallback onChanged;
+  final bool compact;
 
   Future<void> _tap() async {
     final repo = SwiflyListsRepository.instance;
@@ -40,10 +46,10 @@ class ListJoinButton extends StatelessWidget {
       label = 'Requested';
       filled = false;
     } else if (list.isPrivate) {
-      label = 'Request';
+      label = compact ? 'Request' : 'Request to join';
       filled = true;
     } else {
-      label = 'Join';
+      label = compact ? 'Join' : 'Join list';
       filled = true;
     }
 
@@ -67,3 +73,5 @@ class ListJoinButton extends StatelessWidget {
     );
   }
 }
+
+

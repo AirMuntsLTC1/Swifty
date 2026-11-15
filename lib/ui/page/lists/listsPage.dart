@@ -199,7 +199,8 @@ class _ListsPageState extends State<ListsPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${compactCount(list.memberCount)} members',
+                          '${compactCount(list.memberCount)} members · '
+                          '${compactCount(list.followerCount)} followers',
                           style: listTitleStyle(size: 12, color: Colors.white70),
                         ),
                       ],
@@ -269,7 +270,7 @@ class _ListsPageState extends State<ListsPage> {
               ),
             ),
             const SizedBox(width: 10),
-            ListJoinButton(list: list, onChanged: _load),
+            ListJoinButton(list: list, onChanged: _load, compact: true),
           ],
         ),
       ),
@@ -350,3 +351,5 @@ class _ListsPageState extends State<ListsPage> {
     );
   }
 }
+
+

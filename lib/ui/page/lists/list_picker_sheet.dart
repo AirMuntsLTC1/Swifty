@@ -182,9 +182,11 @@ class _ListPickerSheetState extends State<ListPickerSheet> {
             ),
           ),
           const SizedBox(width: 10),
-          ListJoinButton(list: list, onChanged: _load),
+          ListJoinButton(list: list, onChanged: _load, compact: true),
         ],
       ),
     );
   }
 }
+
+

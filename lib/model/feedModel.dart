@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter_twitter_clone/model/user.dart';
+import 'package:flutter_twitter_clone/model/swifly_list.dart';
 
 class FeedModel {
   String? key;
@@ -22,6 +23,9 @@ class FeedModel {
   /// Set when this post was retweeted by someone (shown above the post).
   String? repostedById;
   String? repostedByName;
+  /// List linked to this post (null for ordinary posts).
+  String? listId;
+  SwiflyList? attachedList;
   FeedModel(
       {this.key,
       this.description,
@@ -37,7 +41,9 @@ class FeedModel {
       this.replyTweetKeyList,
       this.parentkey,
       this.lanCode,
-      this.childRetwetkey});
+      this.childRetwetkey,
+      this.listId,
+      this.attachedList});
   toJson() {
     return {
       "userId": userId,
@@ -53,7 +59,8 @@ class FeedModel {
       "user": user == null ? null : user!.toJson(),
       "parentkey": parentkey,
       "lanCode": lanCode,
-      "childRetwetkey": childRetwetkey
+      "childRetwetkey": childRetwetkey,
+      "listId": listId
     };
   }
 
@@ -71,6 +78,7 @@ class FeedModel {
     user = UserModel.fromJson(map['user']);
     parentkey = map['parentkey'];
     childRetwetkey = map['childRetwetkey'];
+    listId = map['listId']?.toString();
     if (map['tags'] != null) {
       tags = <String>[];
       map['tags'].forEach((value) {
@@ -142,5 +150,7 @@ class FeedModel {
     }
   }
 }
+
+
 
 

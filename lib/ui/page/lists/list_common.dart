@@ -69,6 +69,90 @@ class ListCover extends StatelessWidget {
   }
 }
 
+/// A tappable list attachment shown directly inside a post.
+/// Its cover, list name and counts are visible without opening the list first.
+class ListPostAttachment extends StatelessWidget {
+  const ListPostAttachment({
+    super.key,
+    required this.list,
+    required this.onTap,
+  });
+
+  final SwiflyList list;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(16);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: radius,
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: ListCover(list: list, size: 64, radius: 12),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        list.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: listTitleStyle(size: 14),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '${compactCount(list.memberCount)} members · '
+                        '${compactCount(list.followerCount)} followers',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: listGreyStyle(size: 12, weight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            list.isPrivate ? Icons.lock_outline : Icons.public,
+                            size: 13,
+                            color: AppColor.darkGrey,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            list.isPrivate ? 'Private list' : 'Public list',
+                            style: listGreyStyle(size: 11, weight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, color: AppColor.primary, size: 22),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Round profile photo with the app's placeholder when there is none.
 class PersonAvatar extends StatelessWidget {
   const PersonAvatar({super.key, this.url, this.radius = 18});
@@ -172,3 +256,5 @@ class ListEmptyState extends StatelessWidget {
     );
   }
 }
+
+

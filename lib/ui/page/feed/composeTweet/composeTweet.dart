@@ -15,7 +15,6 @@ import 'package:flutter_twitter_clone/state/searchState.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/model/swifly_list.dart';
-import 'package:flutter_twitter_clone/supabase/supabase_lists_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/list_common.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/list_picker_sheet.dart';
 import 'package:flutter_twitter_clone/widgets/customAppBar.dart';
@@ -102,10 +101,7 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
   Widget _selectedListChip() {
     final list = _selectedList!;
     return InputChip(
-      avatar: customIcon(context,
-          icon: AppIcon.lists,
-          isTwitterIcon: false,
-          iconColor: AppColor.primary),
+      avatar: ListCover(list: list, size: 28, radius: 7),
       label: Text(list.name,
           style: listTitleStyle(size: 14, color: AppColor.primary)),
       backgroundColor: TwitterColor.mystic,
@@ -147,7 +143,13 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
 
       String? tweetId;
       if (widget.isTweet) {
-        tweetId = await state.createTweet(tweetModel);
+        final selectedList = _selectedList;
+        tweetModel.listId = selectedList?.id;
+        tweetModel.attachedList = selectedList;
+        tweetId = await state.createTweet(
+          tweetModel,
+          listId: selectedList?.id,
+        );
       } else if (widget.isRetweet) {
         tweetId = await state.createReTweet(tweetModel);
       } else {
@@ -162,17 +164,6 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
         return;
       }
       tweetModel.key = tweetId;
-
-      // Posting into a list is optional; a failure here must not block the post.
-      final pickedList = _selectedList;
-      if (pickedList != null && widget.isTweet) {
-        try {
-          await SwiflyListsRepository.instance
-              .tagPostToList(tweetId, pickedList.id);
-        } catch (error) {
-          debugPrint('tag to list failed: $error');
-        }
-      }
 
       // Mention notifications must never block the post itself.
       try {
@@ -693,6 +684,8 @@ class _UserTile extends StatelessWidget {
     );
   }
 }
+
+
 
 
 

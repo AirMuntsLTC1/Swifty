@@ -62,10 +62,12 @@ class TweetBaseState extends AppState {
   }
 
   /// Create a post. Returns the new post id.
-  Future<String?> createPost(FeedModel tweet) => _repo.createPost(
+  Future<String?> createPost(FeedModel tweet, {String? listId}) =>
+      _repo.createPost(
         text: tweet.description ?? '',
         tags: tweet.tags ?? const [],
         imageUrl: tweet.imagePath,
+        listId: listId ?? tweet.listId,
       );
 
   /// Upload an image to the post-media bucket and return its URL.
@@ -78,3 +80,5 @@ class TweetBaseState extends AppState {
     }
   }
 }
+
+

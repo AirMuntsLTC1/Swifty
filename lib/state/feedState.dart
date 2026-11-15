@@ -197,7 +197,7 @@ class FeedState extends AppState {
   String? lastPostError;
 
   /// Create a new post. Returns the post id, or null when the post was not saved.
-  Future<String?> createTweet(FeedModel model) async {
+  Future<String?> createTweet(FeedModel model, {String? listId}) async {
     isBusy = true;
     lastPostError = null;
     notifyListeners();
@@ -207,6 +207,7 @@ class FeedState extends AppState {
         text: model.description ?? '',
         tags: model.tags ?? const [],
         imageUrl: model.imagePath,
+        listId: listId,
       );
       tweetKey = newId;
       // Read the row back (with author and media) so it appears at once.
@@ -491,6 +492,8 @@ class FeedState extends AppState {
     _refreshPost(postId);
   }
 }
+
+
 
 
 
