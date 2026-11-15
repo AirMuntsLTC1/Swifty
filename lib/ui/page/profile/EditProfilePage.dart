@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
+import 'package:flutter_twitter_clone/helper/user_location.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
@@ -36,6 +37,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   /// Date of birth as yyyy-MM-dd, set only when the user picks a new date.
   String? dob;
   bool _saving = false;
+  bool _locating = false;
 
   @override
   void initState() {
@@ -75,7 +77,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
         _entry('Name', controller: _name),
         _entry('Bio', controller: _bio, maxLine: 3),
-        _entry('Location', controller: _location),
+        _entry('Location',
+            controller: _location,
+            onTap: () => _fillLocation(),
+            suffix: _locateButton()),
         InkWell(
           onTap: showCalender,
           child: _entry('Date of birth', enabled: false, controller: _dob),
@@ -150,7 +155,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget _entry(String title,
       {required TextEditingController controller,
       int maxLine = 1,
-      bool enabled = true}) {
+      bool enabled = true,
+      VoidCallback? onTap,
+      Widget? suffix}) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
       child: Column(
@@ -161,13 +168,54 @@ class _EditProfilePageState extends State<EditProfilePage> {
             enabled: enabled,
             controller: controller,
             maxLines: maxLine,
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(vertical: 5, horizontal: 0),
+            onTap: onTap,
+            decoration: InputDecoration(
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 5, horizontal: 0),
+              suffixIcon: suffix,
             ),
           )
         ],
       ),
     );
+  }
+
+  /// Fills the location with the user's place. Asks for permission first when
+  /// needed. Tapping the field fills it only when it is empty.
+  Future<void> _fillLocation({bool force = false}) async {
+    if (_locating) return;
+    if (!force && _location.text.trim().isNotEmpty) return;
+    setState(() => _locating = true);
+    try {
+      final place = await currentPlaceName();
+      if (!mounted) return;
+      setState(() => _location.text = place);
+    } on LocationException catch (error) {
+      if (mounted) Utility.customSnackBar(context, error.message);
+    } catch (_) {
+      if (mounted) {
+        Utility.customSnackBar(context, 'Could not get your location.');
+      }
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  Widget _locateButton() {
+    return _locating
+        ? const Padding(
+            padding: EdgeInsets.all(12),
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          )
+        : IconButton(
+            tooltip: 'Use my location',
+            icon: const Icon(LucideIcons.mapPin, color: Colors.blue),
+            onPressed: () => _fillLocation(force: true),
+          );
   }
 
   Future<void> showCalender() async {
