@@ -5,11 +5,28 @@ import 'package:flutter_twitter_clone/ui/page/lists/list_common.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/listDetailPage.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 
-/// "<name> added you to a list". Tapping it opens the list.
+/// One tile for every list notification. The text depends on the kind:
+/// added to a list, joined, asked to join, request accepted, or posted in a list.
 class ListAddNotificationTile extends StatelessWidget {
   const ListAddNotificationTile({super.key, required this.model});
 
   final NotificationModel model;
+
+  String _sentence(String kind) {
+    switch (kind) {
+      case 'list_join':
+        return 'joined';
+      case 'list_request':
+        return 'asked to join';
+      case 'list_request_accepted':
+        return 'accepted your request to join';
+      case 'list_post':
+        return 'posted in';
+      case 'list_add':
+      default:
+        return 'added you to';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +34,9 @@ class ListAddNotificationTile extends StatelessWidget {
     final listId = (data['listId'] ?? '').toString();
     final listName = (data['listName'] ?? 'a list').toString();
     final name = (data['displayName'] ?? 'Someone').toString();
+    final kind = (data['kind'] ?? 'list_add').toString();
     final picture = data['profilePic']?.toString();
+    final sentence = _sentence(kind);
 
     return Column(
       children: [
@@ -41,7 +60,7 @@ class ListAddNotificationTile extends StatelessWidget {
                           style: listGreyStyle(size: 14, weight: FontWeight.w600),
                           children: [
                             TextSpan(text: name, style: listTitleStyle(size: 14)),
-                            const TextSpan(text: ' added you to a list'),
+                            TextSpan(text: ' $sentence'),
                           ],
                         ),
                       ),

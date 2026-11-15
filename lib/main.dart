@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/state/suggestionUserState.dart';
+import 'package:flutter_twitter_clone/state/badgeState.dart';
 import 'package:flutter_twitter_clone/state/settingsState.dart';
 import 'package:flutter_twitter_clone/helper/app_error.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -49,6 +50,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<NotificationState>(
             create: (_) => NotificationState()),
         ChangeNotifierProvider<SettingsState>(create: (_) => SettingsState()),
+        ChangeNotifierProvider<BadgeState>(create: (_) => BadgeState()),
         ChangeNotifierProvider<SuggestionsState>(
             create: (_) => SuggestionsState()),
       ],

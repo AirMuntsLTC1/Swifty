@@ -4,6 +4,7 @@ import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/model/notificationModel.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
 import 'package:flutter_twitter_clone/state/notificationState.dart';
+import 'package:flutter_twitter_clone/state/badgeState.dart';
 import 'package:flutter_twitter_clone/ui/page/notification/widget/follow_notification_tile.dart';
 import 'package:flutter_twitter_clone/ui/page/notification/widget/list_add_notification_tile.dart';
 import 'package:flutter_twitter_clone/ui/page/notification/widget/post_like_tile.dart';
@@ -32,6 +33,7 @@ class _NotificationPageState extends State<NotificationPage> {
       var state = Provider.of<NotificationState>(context, listen: false);
       var authState = Provider.of<AuthState>(context, listen: false);
       state.getDataFromDatabase(authState.userId);
+      Provider.of<BadgeState>(context, listen: false).clearNotifications();
     });
   }
 
@@ -61,7 +63,7 @@ class NotificationPageBody extends StatelessWidget {
 
   Widget _notificationRow(BuildContext context, NotificationModel model) {
     var state = Provider.of<NotificationState>(context);
-    if (model.type == NotificationType.ListAdd.toString()) {
+    if (model.type == NotificationType.ListActivity.toString()) {
       return ListAddNotificationTile(model: model);
     }
     if (model.type == NotificationType.Follow.toString()) {

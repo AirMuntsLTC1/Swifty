@@ -1,6 +1,5 @@
-// Data layer for Lists. Reads go straight to the lists tables (RLS decides
-// what each user can see). Writes call the swifly_* functions, which check
-// the rules and then change the rows.
+// Data layer for Lists. Reads go straight to the tables (RLS decides what each
+// user can see). Writes call the swifly_* functions, which check the rules.
 import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -36,6 +35,14 @@ class ListPerson {
   }
 }
 
+/// A pending request to join a private list.
+class ListJoinRequest {
+  const ListJoinRequest({required this.userId, required this.person});
+
+  final String userId;
+  final ListPerson person;
+}
+
 class ListsOverview {
   const ListsOverview({
     required this.pinned,
@@ -66,7 +73,6 @@ class SwiflyListsRepository {
       'id, author_id, text, audience, tagged_handles, likes, saves, shares, '
       'created_at, views';
 
-  /// Every call goes through here, so a failure is shown with the action name.
   Future<T> _run<T>(String where, Future<T> Function() op) async {
     try {
       return await op();
@@ -90,11 +96,16 @@ class SwiflyListsRepository {
     };
   }
 
+  Set<String> _ids(dynamic rows, [String key = 'list_id']) => {
+        for (final r in List<Map<String, dynamic>>.from(rows as List))
+          r[key].toString(),
+      };
+
   // ---------------------------------------------------------------------------
   // Reads
   // ---------------------------------------------------------------------------
 
-  /// Everything the Lists screen shows: pinned, discover, and your lists.
+  /// Pinned, discover (public and private cards) and your lists.
   Future<ListsOverview> fetchOverview() => _run('Load lists', () async {
         final me = _me;
         if (me == null) return ListsOverview.empty;
@@ -107,6 +118,12 @@ class SwiflyListsRepository {
               .order('position', ascending: true),
           _db.from('list_follows').select('list_id').eq('user_id', me),
           _db.from('list_editors').select('list_id').eq('user_id', me),
+          _db.from('list_members').select('list_id').eq('user_id', me),
+          _db
+              .from('list_join_requests')
+              .select('list_id')
+              .eq('user_id', me)
+              .eq('status', 'pending'),
           _db
               .from('lists')
               .select(_listColumns)
@@ -116,7 +133,6 @@ class SwiflyListsRepository {
               .from('lists')
               .select(_listColumns)
               .neq('owner_id', me)
-              .eq('is_private', false)
               .order('follower_count', ascending: false)
               .limit(30),
         ]);
@@ -124,23 +140,19 @@ class SwiflyListsRepository {
         final pinIds = List<Map<String, dynamic>>.from(first[0] as List)
             .map((r) => r['list_id'].toString())
             .toList();
-        final followIds = List<Map<String, dynamic>>.from(first[1] as List)
-            .map((r) => r['list_id'].toString())
-            .toSet();
-        final editorIds = List<Map<String, dynamic>>.from(first[2] as List)
-            .map((r) => r['list_id'].toString())
-            .toSet();
-        final owned = List<Map<String, dynamic>>.from(first[3] as List);
-        final discoverRows = List<Map<String, dynamic>>.from(first[4] as List);
+        final followIds = _ids(first[1]);
+        final editorIds = _ids(first[2]);
+        final memberIds = _ids(first[3]);
+        final pendingIds = _ids(first[4]);
+        final owned = List<Map<String, dynamic>>.from(first[5] as List);
+        final discoverRows = List<Map<String, dynamic>>.from(first[6] as List);
 
         final byId = <String, Map<String, dynamic>>{};
         for (final row in [...owned, ...discoverRows]) {
           byId[row['id'].toString()] = row;
         }
 
-        // Pinned, followed and collaborated lists that were not in the first
-        // two queries. RLS hides any the user can no longer see.
-        final missing = {...pinIds, ...followIds, ...editorIds}
+        final missing = {...pinIds, ...followIds, ...editorIds, ...memberIds}
             .where((id) => !byId.containsKey(id))
             .toList();
         if (missing.isNotEmpty) {
@@ -160,8 +172,10 @@ class SwiflyListsRepository {
           final owner = people[list.ownerId];
           list.isOwner = list.ownerId == me;
           list.isEditor = editorIds.contains(list.id);
+          list.isMember = memberIds.contains(list.id);
           list.isFollowing = followIds.contains(list.id);
           list.isPinned = pinIds.contains(list.id);
+          list.hasPendingRequest = pendingIds.contains(list.id);
           list.ownerName = owner?.name;
           list.ownerHandle = owner?.handle;
           list.ownerAvatar = owner?.avatar;
@@ -177,7 +191,8 @@ class SwiflyListsRepository {
               final id = r['id'].toString();
               return r['owner_id'].toString() == me ||
                   followIds.contains(id) ||
-                  editorIds.contains(id);
+                  editorIds.contains(id) ||
+                  memberIds.contains(id);
             })
             .map(build)
             .toList();
@@ -189,37 +204,27 @@ class SwiflyListsRepository {
         return ListsOverview(pinned: pinned, discover: discover, yours: yours);
       });
 
-  /// One list with the signed-in user's relationship to it. Null if the list
-  /// does not exist or the user cannot see it.
+  /// One list with your relationship to it. Null if it is not available to you.
   Future<SwiflyList?> fetchList(String listId) => _run('Open list', () async {
         final me = _me ?? '';
         final rows = List<Map<String, dynamic>>.from(
-          await _db
-              .from('lists')
-              .select(_listColumns)
-              .eq('id', listId)
-              .limit(1),
+          await _db.from('lists').select(_listColumns).eq('id', listId).limit(1),
         );
         if (rows.isEmpty) return null;
 
         final list = SwiflyList.fromRow(rows.first);
         final results = await Future.wait<dynamic>([
           _people([list.ownerId]),
+          _db.from('list_follows').select('list_id').eq('list_id', listId).eq('user_id', me),
+          _db.from('list_pins').select('list_id').eq('list_id', listId).eq('user_id', me),
+          _db.from('list_editors').select('list_id').eq('list_id', listId).eq('user_id', me),
+          _db.from('list_members').select('list_id').eq('list_id', listId).eq('user_id', me),
           _db
-              .from('list_follows')
+              .from('list_join_requests')
               .select('list_id')
               .eq('list_id', listId)
-              .eq('user_id', me),
-          _db
-              .from('list_pins')
-              .select('list_id')
-              .eq('list_id', listId)
-              .eq('user_id', me),
-          _db
-              .from('list_editors')
-              .select('list_id')
-              .eq('list_id', listId)
-              .eq('user_id', me),
+              .eq('user_id', me)
+              .eq('status', 'pending'),
         ]);
 
         final owner = (results[0] as Map<String, ListPerson>)[list.ownerId];
@@ -227,6 +232,8 @@ class SwiflyListsRepository {
         list.isFollowing = (results[1] as List).isNotEmpty;
         list.isPinned = (results[2] as List).isNotEmpty;
         list.isEditor = (results[3] as List).isNotEmpty;
+        list.isMember = (results[4] as List).isNotEmpty;
+        list.hasPendingRequest = (results[5] as List).isNotEmpty;
         list.ownerName = owner?.name;
         list.ownerHandle = owner?.handle;
         list.ownerAvatar = owner?.avatar;
@@ -244,10 +251,7 @@ class SwiflyListsRepository {
         );
         final ids = rows.map((r) => r['user_id'].toString()).toList();
         final people = await _people(ids);
-        return [
-          for (final id in ids)
-            if (people[id] != null) people[id]!,
-        ];
+        return [for (final id in ids) if (people[id] != null) people[id]!];
       });
 
   Future<List<ListPerson>> fetchEditors(String listId) =>
@@ -261,32 +265,74 @@ class SwiflyListsRepository {
         );
         final ids = rows.map((r) => r['user_id'].toString()).toList();
         final people = await _people(ids);
+        return [for (final id in ids) if (people[id] != null) people[id]!];
+      });
+
+  /// Pending join requests. Only owners and collaborators get rows (RLS).
+  Future<List<ListJoinRequest>> fetchJoinRequests(String listId) =>
+      _run('Load join requests', () async {
+        final rows = List<Map<String, dynamic>>.from(
+          await _db
+              .from('list_join_requests')
+              .select('user_id, created_at')
+              .eq('list_id', listId)
+              .eq('status', 'pending')
+              .order('created_at', ascending: true),
+        );
+        final ids = rows.map((r) => r['user_id'].toString()).toList();
+        final people = await _people(ids);
         return [
           for (final id in ids)
-            if (people[id] != null) people[id]!,
+            if (people[id] != null)
+              ListJoinRequest(userId: id, person: people[id]!),
         ];
       });
 
-  /// The list's timeline: recent posts from its members. Posts the signed-in
-  /// user cannot see (for example, followers-only posts from someone they do
-  /// not follow) are left out by RLS, as everywhere else in the app.
+  /// Recent posts from the list's owner and members, plus posts tagged to the
+  /// list. RLS still hides posts the viewer is not allowed to see.
   Future<List<FeedModel>> fetchTimeline(String listId) =>
       _run('Load list posts', () async {
-        final rows = List<Map<String, dynamic>>.from(
+        final list = await _db
+            .from('lists')
+            .select('owner_id')
+            .eq('id', listId)
+            .maybeSingle();
+        final members = List<Map<String, dynamic>>.from(
           await _db.from('list_members').select('user_id').eq('list_id', listId),
         );
-        final authorIds = rows.map((r) => r['user_id'].toString()).toList();
-        if (authorIds.isEmpty) return <FeedModel>[];
+        final authorIds = {
+          if (list != null) list['owner_id'].toString(),
+          ...members.map((r) => r['user_id'].toString()),
+        }.toList();
 
-        final posts = List<Map<String, dynamic>>.from(
+        final byAuthor = authorIds.isEmpty
+            ? <Map<String, dynamic>>[]
+            : List<Map<String, dynamic>>.from(
+                await _db
+                    .from('posts')
+                    .select(_postColumns)
+                    .inFilter('author_id', authorIds)
+                    .order('created_at', ascending: false)
+                    .limit(60),
+              );
+        final tagged = List<Map<String, dynamic>>.from(
           await _db
               .from('posts')
               .select(_postColumns)
-              .inFilter('author_id', authorIds)
+              .eq('list_id', listId)
               .order('created_at', ascending: false)
               .limit(60),
         );
-        return SupabaseRepository.instance.hydratePosts(posts);
+
+        final merged = <String, Map<String, dynamic>>{};
+        for (final row in [...byAuthor, ...tagged]) {
+          merged[row['id'].toString()] = row;
+        }
+        final posts = merged.values.toList()
+          ..sort((a, b) => b['created_at'].toString()
+              .compareTo(a['created_at'].toString()));
+        return SupabaseRepository.instance
+            .hydratePosts(posts.take(60).toList());
       });
 
   /// People matching a name or username, excluding the signed-in user.
@@ -309,7 +355,7 @@ class SwiflyListsRepository {
       });
 
   // ---------------------------------------------------------------------------
-  // Writes (each one is a database function that checks the rules)
+  // Writes (each is a database function that checks the rules)
   // ---------------------------------------------------------------------------
 
   Future<String> createList({
@@ -354,6 +400,35 @@ class SwiflyListsRepository {
         await _db.rpc('swifly_delete_list', params: {'p_list': listId});
       });
 
+  /// Public list: joins at once and returns 'joined'.
+  /// Private list: sends a request and returns 'requested'.
+  Future<String> joinList(String listId) => _run('Join list', () async {
+        final result = await _db.rpc('swifly_join_list', params: {'p_list': listId});
+        return result.toString();
+      });
+
+  Future<void> leaveList(String listId) => _run('Leave list', () async {
+        await _db.rpc('swifly_leave_list', params: {'p_list': listId});
+      });
+
+  Future<void> cancelJoinRequest(String listId) =>
+      _run('Cancel request', () async {
+        await _db.rpc('swifly_cancel_join_request', params: {'p_list': listId});
+      });
+
+  Future<void> respondJoinRequest(
+    String listId,
+    String userId, {
+    required bool accept,
+  }) =>
+      _run('Respond to request', () async {
+        await _db.rpc('swifly_respond_join_request', params: {
+          'p_list': listId,
+          'p_user': userId,
+          'p_accept': accept,
+        });
+      });
+
   Future<void> addMember(String listId, String userId) =>
       _run('Add to list', () async {
         await _db.rpc('swifly_add_list_member', params: {
@@ -392,6 +467,15 @@ class SwiflyListsRepository {
         await _db.rpc('swifly_set_list_pin', params: {
           'p_list': listId,
           'p_pinned': pinned,
+        });
+      });
+
+  /// Attach one of your posts to a list you belong to.
+  Future<void> tagPostToList(String postId, String listId) =>
+      _run('Post to list', () async {
+        await _db.rpc('swifly_tag_post_to_list', params: {
+          'p_post': postId,
+          'p_list': listId,
         });
       });
 

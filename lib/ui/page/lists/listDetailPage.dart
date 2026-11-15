@@ -8,6 +8,7 @@ import 'package:flutter_twitter_clone/supabase/supabase_lists_repository.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/list_common.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/listFormPage.dart';
+import 'package:flutter_twitter_clone/ui/page/lists/list_join_button.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/listMemberPicker.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/profilePage.dart';
@@ -41,6 +42,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
   List<ListPerson> _members = [];
   List<ListPerson> _editors = [];
   List<FeedModel> _posts = [];
+  List<ListJoinRequest> _requests = [];
   bool _loading = true;
   bool _changed = false;
   bool _showMembers = false;
@@ -63,6 +65,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
         _repo.fetchMembers(widget.listId),
         _repo.fetchEditors(widget.listId),
         _repo.fetchTimeline(widget.listId),
+        _repo.fetchJoinRequests(widget.listId),
       ]);
       if (!mounted) return;
       setState(() {
@@ -70,6 +73,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
         _members = results[0] as List<ListPerson>;
         _editors = results[1] as List<ListPerson>;
         _posts = results[2] as List<FeedModel>;
+        _requests = results[3] as List<ListJoinRequest>;
       });
     } catch (_) {
       // The repository has already shown the error.
@@ -344,6 +348,14 @@ class _ListDetailPageState extends State<ListDetailPage> {
       runSpacing: 10,
       children: [
         if (!list.canEdit)
+          ListJoinButton(
+            list: list,
+            onChanged: () {
+              _changed = true;
+              _load();
+            },
+          ),
+        if (!list.canEdit && (!list.isPrivate || list.isMember))
           ListFollowButton(following: list.isFollowing, onTap: _toggleFollow),
         if (list.canEdit || list.isFollowing)
           OutlinedButton.icon(
@@ -365,6 +377,92 @@ class _ListDetailPageState extends State<ListDetailPage> {
           ),
       ],
     );
+  }
+
+  Widget _privateNotice() {
+    return Container(
+      color: Colors.white,
+      margin: const EdgeInsets.only(top: 10),
+      child: ListEmptyState(
+        'This list is private',
+        subTitle: 'Request to join to see its posts and members.',
+      ),
+    );
+  }
+
+  List<Widget> _requestItems(SwiflyList list) {
+    if (_requests.isEmpty) return [];
+    return [
+      _sectionHeader('Join requests · ${compactCount(_requests.length)}'),
+      for (final request in _requests) _requestRow(list, request),
+    ];
+  }
+
+  Widget _requestRow(SwiflyList list, ListJoinRequest request) {
+    final person = request.person;
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          PersonAvatar(url: person.avatar, radius: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  person.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: listTitleStyle(size: 15),
+                ),
+                Text(
+                  person.handle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: listGreyStyle(size: 13, weight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => _respond(list, request, accept: false),
+            child: Text('Decline', style: listGreyStyle(size: 14)),
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _respond(list, request, accept: true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColor.primary,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Accept',
+                style: listTitleStyle(size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _respond(
+    SwiflyList list,
+    ListJoinRequest request, {
+    required bool accept,
+  }) async {
+    try {
+      await _repo.respondJoinRequest(list.id, request.userId, accept: accept);
+    } catch (_) {
+      // The repository has already shown the error.
+    }
+    _changed = true;
+    await _load();
   }
 
   Widget _tabs() {
@@ -415,6 +513,13 @@ class _ListDetailPageState extends State<ListDetailPage> {
   // ---------------------------------------------------------------------------
 
   List<Widget> _timelineSection() {
+    final current = _list;
+    if (current != null &&
+        current.isPrivate &&
+        !current.canEdit &&
+        !current.isMember) {
+      return [_privateNotice()];
+    }
     if (_posts.isEmpty) {
       return [
         Container(
@@ -451,6 +556,9 @@ class _ListDetailPageState extends State<ListDetailPage> {
   // ---------------------------------------------------------------------------
 
   List<Widget> _membersSection(SwiflyList list, String? me) {
+    if (list.isPrivate && !list.canEdit && !list.isMember) {
+      return [_privateNotice()];
+    }
     final items = <Widget>[
       _sectionHeader(
         'Members · ${compactCount(_members.length)}',
@@ -471,6 +579,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
       ));
     }
 
+    if (list.canEdit) items.addAll(_requestItems(list));
     if (list.isOwner || _editors.isNotEmpty) {
       items.add(_sectionHeader(
         'Collaborators',

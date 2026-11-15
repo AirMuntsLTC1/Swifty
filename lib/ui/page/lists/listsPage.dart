@@ -6,6 +6,7 @@ import 'package:flutter_twitter_clone/supabase/supabase_lists_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/list_common.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/listDetailPage.dart';
 import 'package:flutter_twitter_clone/ui/page/lists/listFormPage.dart';
+import 'package:flutter_twitter_clone/ui/page/lists/list_join_button.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
@@ -268,11 +269,7 @@ class _ListsPageState extends State<ListsPage> {
               ),
             ),
             const SizedBox(width: 10),
-            ListFollowButton(
-              following: list.isFollowing,
-              onTap: () => _action(
-                  () => _repo.setFollow(list.id, follow: !list.isFollowing)),
-            ),
+            ListJoinButton(list: list, onChanged: _load),
           ],
         ),
       ),
@@ -296,7 +293,9 @@ class _ListsPageState extends State<ListsPage> {
         ? 'Owner'
         : list.isEditor
             ? 'Collaborator'
-            : 'Following';
+            : list.isMember
+                ? 'Member'
+                : 'Following';
     return InkWell(
       onTap: () => _open(list),
       child: Padding(

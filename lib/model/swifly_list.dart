@@ -65,10 +65,15 @@ class SwiflyList {
   /// Relative to the signed-in user.
   bool isOwner = false;
   bool isEditor = false;
+  bool isMember = false;
   bool isFollowing = false;
   bool isPinned = false;
+  bool hasPendingRequest = false;
 
   bool get canEdit => isOwner || isEditor;
+
+  /// Owner, collaborator or member: may post to the list.
+  bool get canPostTo => isOwner || isEditor || isMember;
 
   IconData get iconData => SwiflyListIcons.of(icon);
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/state/appState.dart';
+import 'package:flutter_twitter_clone/state/badgeState.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/widgets/bottomMenuBar/tabItem.dart';
 import 'package:provider/provider.dart';
@@ -57,6 +58,46 @@ class _BottomMenubarState extends State<BottomMenubar> {
     );
   }
 
+  /// Red count badge: index 2 is notifications, index 3 is messages.
+  Widget _badged(int index, Widget child) {
+    final badge = Provider.of<BadgeState>(context);
+    final count = index == 2
+        ? badge.notifications
+        : index == 3
+            ? badge.messages
+            : 0;
+    if (count <= 0) return child;
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        child,
+        Positioned(
+          top: -6,
+          right: -10,
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: TwitterColor.ceriseRed,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: Colors.white, width: 1.5),
+            ),
+            child: Text(
+              count > 99 ? '99+' : '$count',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _icon(IconData? iconData, int index,
       {bool isCustomIcon = false, IconData? icon}) {
     if (isCustomIcon) {
@@ -84,11 +125,11 @@ class _BottomMenubarState extends State<BottomMenubar> {
               padding: const EdgeInsets.all(0),
               alignment: const Alignment(0, 0),
               icon: isCustomIcon
-                  ? customIcon(context,
+                  ? _badged(index, customIcon(context,
                       icon: icon!,
                       size: 22,
                       isTwitterIcon: false,
-                      isEnable: index == state.pageIndex)
+                      isEnable: index == state.pageIndex))
                   : Icon(
                       iconData,
                       color: index == state.pageIndex

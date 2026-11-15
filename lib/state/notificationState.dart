@@ -90,7 +90,7 @@ class NotificationState extends AppState {
 
       // Messages are shown in the chat tab, not here.
       if (type == NotificationType.Message.toString()) continue;
-      final isList = type == NotificationType.ListAdd.toString();
+      final isList = type == NotificationType.ListActivity.toString();
       final listId = row['list_id']?.toString();
       if (isList && listId == null) continue;
       if (!isFollow && !isList && postId == null) continue;
@@ -98,7 +98,7 @@ class NotificationState extends AppState {
       final groupKey = isFollow
           ? 'follow:$actorId'
           : isList
-              ? 'list:$listId:$actorId'
+              ? 'list:$listId:$actorId:$rawType'
               : 'post:$postId:$type';
       if (!seen.add(groupKey)) continue;
 
@@ -117,6 +117,7 @@ class NotificationState extends AppState {
           : isList
               ? <String, dynamic>{
                   'listId': listId,
+                  'kind': rawType,
                   'listName': (row['preview'] ?? '').toString(),
                   'userId': actorId,
                   'displayName': (row['actor_name'] ?? '').toString(),
@@ -154,7 +155,11 @@ class NotificationState extends AppState {
       case 'retweet':
         return NotificationType.Retweet.toString();
       case 'list_add':
-        return NotificationType.ListAdd.toString();
+      case 'list_join':
+      case 'list_request':
+      case 'list_request_accepted':
+      case 'list_post':
+        return NotificationType.ListActivity.toString();
       default:
         return NotificationType.Tweet.toString();
     }

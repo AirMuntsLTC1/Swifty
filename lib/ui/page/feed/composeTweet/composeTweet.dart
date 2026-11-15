@@ -14,6 +14,10 @@ import 'package:flutter_twitter_clone/state/feedState.dart';
 import 'package:flutter_twitter_clone/state/searchState.dart';
 import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
+import 'package:flutter_twitter_clone/model/swifly_list.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_lists_repository.dart';
+import 'package:flutter_twitter_clone/ui/page/lists/list_common.dart';
+import 'package:flutter_twitter_clone/ui/page/lists/list_picker_sheet.dart';
 import 'package:flutter_twitter_clone/widgets/customAppBar.dart';
 import 'package:flutter_twitter_clone/widgets/customWidgets.dart';
 import 'package:flutter_twitter_clone/widgets/url_text/customUrlText.dart';
@@ -78,6 +82,39 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
     });
   }
 
+  SwiflyList? _selectedList;
+
+  Future<void> _openListPicker() async {
+    final picked = await showModalBottomSheet<SwiflyList>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const ListPickerSheet(),
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedList = picked);
+    }
+  }
+
+  Widget _selectedListChip() {
+    final list = _selectedList!;
+    return InputChip(
+      avatar: customIcon(context,
+          icon: AppIcon.lists,
+          isTwitterIcon: false,
+          iconColor: AppColor.primary),
+      label: Text(list.name,
+          style: listTitleStyle(size: 14, color: AppColor.primary)),
+      backgroundColor: TwitterColor.mystic,
+      deleteIconColor: AppColor.primary,
+      side: BorderSide.none,
+      onDeleted: () => setState(() => _selectedList = null),
+    );
+  }
+
   void _onImageIconSelected(File file) {
     setState(() {
       _image = file;
@@ -125,6 +162,17 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
         return;
       }
       tweetModel.key = tweetId;
+
+      // Posting into a list is optional; a failure here must not block the post.
+      final pickedList = _selectedList;
+      if (pickedList != null && widget.isTweet) {
+        try {
+          await SwiflyListsRepository.instance
+              .tagPostToList(tweetId, pickedList.id);
+        } catch (error) {
+          debugPrint('tag to list failed: $error');
+        }
+      }
 
       // Mention notifications must never block the post itself.
       try {
@@ -214,11 +262,18 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
             child:
                 widget.isRetweet ? _ComposeRetweet(this) : _ComposeTweet(this),
           ),
+          if (_selectedList != null)
+            Positioned(
+              left: 16,
+              bottom: 52,
+              child: _selectedListChip(),
+            ),
           Align(
             alignment: Alignment.bottomCenter,
             child: ComposeBottomIconWidget(
               textEditingController: _textEditingController,
               onImageIconSelected: _onImageIconSelected,
+              onListIconPressed: _openListPicker,
             ),
           ),
         ],

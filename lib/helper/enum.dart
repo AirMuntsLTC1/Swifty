@@ -27,5 +27,6 @@ enum NotificationType {
   Follow,
   Mention,
   Like,
-  ListAdd
+  ListAdd,
+  ListActivity
 }

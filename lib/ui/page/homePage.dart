@@ -8,6 +8,7 @@ import 'package:flutter_twitter_clone/resource/push_notification_service.dart';
 import 'package:flutter_twitter_clone/state/appState.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
 import 'package:flutter_twitter_clone/state/chats/chatState.dart';
+import 'package:flutter_twitter_clone/state/badgeState.dart';
 import 'package:flutter_twitter_clone/state/feedState.dart';
 import 'package:flutter_twitter_clone/state/notificationState.dart';
 import 'package:flutter_twitter_clone/state/searchState.dart';
@@ -83,6 +84,7 @@ class _HomePageState extends State<HomePage> {
     final authState = Provider.of<AuthState>(context, listen: false);
     state.databaseInit(authState.userId);
     state.getDataFromDatabase(authState.userId);
+    Provider.of<BadgeState>(context, listen: false).start(authState.userId);
 
     // Start push (device token + tap handling).
     state.initFirebaseService();
