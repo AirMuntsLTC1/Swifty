@@ -173,6 +173,8 @@ class StoryStats {
   int get totalReactions => reactions.values.fold(0, (a, b) => a + b);
 }
 
+/// Photos and text stay on screen for 15 seconds.
+const Duration kStoryPhotoLength = Duration(seconds: 15);
 
-
-
+/// A video story plays at most this long, then the next story starts.
+const Duration kStoryVideoMaxLength = Duration(seconds: 59);

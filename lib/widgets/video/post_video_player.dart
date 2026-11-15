@@ -2,14 +2,14 @@
 //
 // Inline video for the feed, threads, profiles, stories and the composer.
 //
-// - The thumbnail (stored with the post) is shown at once, so there is never
-//   a black box. Once the video starts playing, the picture is the video.
+// - The picture is the stored thumbnail (or a poster made from the video),
+//   shown until the video starts. Never a black box.
 // - In the feed and threads it plays by itself, muted, while at least 60% of
-//   it is on screen. When it scrolls away it pauses, and the player is
-//   released so long feeds do not keep many decoders alive.
-// - Only one video plays at a time: starting one pauses the other.
-// - Tapping opens the thread when [onTap] is given (feed). Inside a thread
-//   (no [onTap]) a tap pauses or plays. The speaker button mutes or unmutes.
+//   it is on screen. When it scrolls away it pauses and the decoder is freed.
+// - Only one video plays at a time.
+// - [onTap] opens the thread (feed). Without it, a tap pauses or plays.
+// - Stories use [looping] false, [maxPlayback] and the position callbacks, so
+//   the story bars follow the video's own length.
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -17,7 +17,7 @@ import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
-import 'package:flutter_twitter_clone/widgets/cache_image.dart';
+import 'package:flutter_twitter_clone/widgets/video/video_poster.dart';
 
 class PostVideoPlayer extends StatefulWidget {
   const PostVideoPlayer({
@@ -30,20 +30,19 @@ class PostVideoPlayer extends StatefulWidget {
     this.fit = BoxFit.cover,
     this.autoPlayWhenVisible = false,
     this.startMuted = true,
+    this.looping = true,
+    this.paused = false,
+    this.maxPlayback,
     this.onTap,
+    this.onDuration,
+    this.onPosition,
+    this.onError,
   }) : assert(url != null || file != null, 'Pass a url or a file');
 
-  /// Public storage URL of the video.
   final String? url;
-
-  /// A local file, used for the preview before posting.
   final File? file;
-
-  /// Still image shown until the video starts. Null shows a plain placeholder.
   final String? thumbnailUrl;
   final double borderRadius;
-
-  /// Frame shape. The feed uses 4:3, stories use the full screen.
   final double aspectRatio;
   final BoxFit fit;
 
@@ -51,8 +50,26 @@ class PostVideoPlayer extends StatefulWidget {
   final bool autoPlayWhenVisible;
   final bool startMuted;
 
+  /// Repeat the video. Stories turn this off, so the video ends once.
+  final bool looping;
+
+  /// Pause from outside (for example while a story is held).
+  final bool paused;
+
+  /// Stop playing at this position (stories use 59 seconds).
+  final Duration? maxPlayback;
+
   /// If set, a tap calls this instead of play/pause (used to open the thread).
   final VoidCallback? onTap;
+
+  /// Called once when the video's length is known.
+  final ValueChanged<Duration>? onDuration;
+
+  /// Called as the video plays. At the end it is called with the end position.
+  final ValueChanged<Duration>? onPosition;
+
+  /// Called if the video cannot be loaded.
+  final VoidCallback? onError;
 
   @override
   State<PostVideoPlayer> createState() => _PostVideoPlayerState();
@@ -76,6 +93,26 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
   }
 
   @override
+  void didUpdateWidget(covariant PostVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final sourceChanged = oldWidget.url != widget.url ||
+        oldWidget.file?.path != widget.file?.path;
+    if (sourceChanged) {
+      _releaseController();
+      _failed = false;
+      if (widget.autoPlayWhenVisible && _visibleFraction >= 0.6) _play();
+      return;
+    }
+    if (oldWidget.paused != widget.paused) {
+      if (widget.paused) {
+        _pause();
+      } else if (widget.autoPlayWhenVisible && _visibleFraction >= 0.6) {
+        _play();
+      }
+    }
+  }
+
+  @override
   void dispose() {
     if (_active == this) _active = null;
     _releaseController();
@@ -86,9 +123,16 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
 
   bool get _playing => _controller?.value.isPlaying ?? false;
 
-  /// True once the first frame is showing, so the picture covers the thumbnail.
+  /// True once playback has started, so the video covers the poster.
   bool get _started =>
       _ready && (_playing || _controller!.value.position > Duration.zero);
+
+  /// The end of playback: the video's length, or [maxPlayback] if shorter.
+  Duration _playbackEnd(VideoPlayerController c) {
+    final length = c.value.duration;
+    final max = widget.maxPlayback;
+    return (max != null && max < length) ? max : length;
+  }
 
   // ---------------------------------------------------------------------------
   // Loading and releasing the player
@@ -105,7 +149,7 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
         : VideoPlayerController.networkUrl(Uri.parse(widget.url!));
     try {
       await c.initialize();
-      await c.setLooping(true);
+      await c.setLooping(widget.looping);
       await c.setVolume(_muted ? 0 : 1);
       if (!mounted) {
         await c.dispose();
@@ -116,17 +160,19 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
       _controller = c;
       _initialising = false;
       setState(() {});
+      widget.onDuration?.call(c.value.duration);
       return true;
     } catch (error) {
       debugPrint('Video failed to load: $error');
       await c.dispose();
       _initialising = false;
       if (mounted) setState(() => _failed = true);
+      widget.onError?.call();
       return false;
     }
   }
 
-  /// Frees the decoder. The thumbnail shows again until the next play.
+  /// Frees the decoder. The poster shows again until the next play.
   void _releaseController() {
     final c = _controller;
     _controller = null;
@@ -138,6 +184,17 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
   }
 
   void _onControllerTick() {
+    final c = _controller;
+    if (c != null && c.value.isInitialized) {
+      final end = _playbackEnd(c);
+      final position = c.value.position;
+      // Stop at the cap (for example 59 seconds in a story).
+      if (c.value.isPlaying && position >= end) {
+        c.pause();
+      }
+      final atEnd = position >= end - const Duration(milliseconds: 150);
+      widget.onPosition?.call(atEnd ? end : position);
+    }
     if (mounted) setState(() {});
   }
 
@@ -158,6 +215,9 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
     }
     final c = _controller;
     if (c == null || c.value.isPlaying) return;
+    if (c.value.position >= _playbackEnd(c)) {
+      await c.seekTo(Duration.zero);
+    }
     if (_active != null && _active != this) _active!._pauseFromOther();
     _active = this;
     await c.play();
@@ -176,7 +236,7 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
     _visibleFraction = info.visibleFraction;
     if (!mounted) return;
     if (_visibleFraction >= 0.6) {
-      _play();
+      if (!widget.paused) _play();
     } else if (_visibleFraction < 0.1) {
       _pause();
       if (_visibleFraction == 0) _releaseController();
@@ -215,11 +275,11 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
           behavior: HitTestBehavior.opaque,
           onTap: _onTap,
           child: ColoredBox(
-            color: const Color(0xFF1B1F23),
+            color: const Color(0xFF2A3440),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _poster(),
+                if (!_started) _poster(),
                 if (c != null && _started) _videoLayer(c),
                 _centerIcon(),
                 if (c != null && _ready) _controls(c),
@@ -238,14 +298,13 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
     );
   }
 
-  /// The picture shown before the video starts. Never black.
   Widget _poster() {
-    if (_started) return const SizedBox.shrink();
-    final thumb = widget.thumbnailUrl;
-    if (thumb != null && thumb.isNotEmpty) {
-      return CacheImage(path: thumb, fit: widget.fit);
-    }
-    return const SizedBox.shrink();
+    return VideoPoster(
+      thumbnailUrl: widget.thumbnailUrl,
+      videoUrl: widget.url,
+      videoFile: widget.file,
+      fit: widget.fit,
+    );
   }
 
   Widget _videoLayer(VideoPlayerController c) {

@@ -331,7 +331,6 @@ class FeedState extends AppState {
     }
   }
 
-  /// Upload [file] to the post-media bucket and return its public URL.
   /// Makes a still image from a picked video and uploads it. Returns its URL,
   /// or null if the thumbnail could not be made (the post still uploads).
   Future<String?> uploadVideoThumbnail(File video) async {
@@ -345,6 +344,7 @@ class FeedState extends AppState {
     }
   }
 
+  /// Upload [file] to the post-media bucket and return its public URL.
   Future<String?> uploadFile(File file) async {
     try {
       isBusy = true;

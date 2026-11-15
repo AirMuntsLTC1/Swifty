@@ -12,6 +12,7 @@ import 'package:flutter_twitter_clone/model/moment_models.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
 import 'package:flutter_twitter_clone/widgets/video/post_video_player.dart';
+import 'package:flutter_twitter_clone/widgets/video/video_poster.dart';
 
 const Color kMomentBorder = Color(0xffEFF3F4);
 const Color kMomentMuted = Color(0xff536471);
@@ -307,7 +308,7 @@ class MomentTile extends StatelessWidget {
                 ],
               )
             : isVideo
-                ? const _VideoTileCover()
+                ? VideoPoster(videoUrl: post.imagePath)
                 : Container(
                     color: momentColorFor(post.key ?? text),
                     padding: const EdgeInsets.all(12),

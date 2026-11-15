@@ -46,7 +46,6 @@ class StoryViewerPage extends StatefulWidget {
 
 class _StoryViewerPageState extends State<StoryViewerPage>
     with SingleTickerProviderStateMixin {
-  static const Duration _storyLength = Duration(seconds: 6);
 
   final MomentsRepository _repo = MomentsRepository.instance;
   final GlobalKey<EmojiBurstLayerState> _burstKey =
@@ -54,6 +53,12 @@ class _StoryViewerPageState extends State<StoryViewerPage>
   final TextEditingController _reply = TextEditingController();
   final FocusNode _replyFocus = FocusNode();
   late final AnimationController _progress;
+
+  /// True while the current story is a video. Its bar follows the video.
+  bool _videoMode = false;
+
+  /// The video's length, capped at 59 seconds. Null until it is known.
+  Duration? _videoLength;
 
   late int _ringIndex;
   int _storyIndex = 0;
@@ -72,7 +77,7 @@ class _StoryViewerPageState extends State<StoryViewerPage>
   void initState() {
     super.initState();
     _ringIndex = widget.initialRing.clamp(0, widget.rings.length - 1).toInt();
-    _progress = AnimationController(vsync: this, duration: _storyLength)
+    _progress = AnimationController(vsync: this, duration: kStoryPhotoLength)
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) _next();
       });
@@ -99,7 +104,7 @@ class _StoryViewerPageState extends State<StoryViewerPage>
     final story = _story;
     final mine = _ring.isMine;
 
-    _progress.forward(from: 0);
+    _startProgressFor(story);
     if (!mine) {
       _repo.markViewed(story.id).catchError((_) {});
     }
@@ -135,7 +140,7 @@ class _StoryViewerPageState extends State<StoryViewerPage>
       _enterStory();
     } else {
       // First story of the first person: restart it.
-      _progress.forward(from: 0);
+      _startProgressFor(_story);
     }
   }
 
@@ -161,11 +166,59 @@ class _StoryViewerPageState extends State<StoryViewerPage>
 
   /// Pause while the finger is down or the reply box is open.
   void _syncPlayback() {
-    if (_holding || _typing) {
+    if (_videoMode) {
+      // The video is paused from the body (it reads _paused). Its bar stops too.
+      setState(() {});
+      return;
+    }
+    if (_paused) {
       _progress.stop();
     } else {
       _progress.forward();
     }
+  }
+
+  bool get _paused => _holding || _typing;
+
+  /// Photos and text run for 15 seconds. A video's bar follows the video,
+  /// up to 59 seconds, and the next story starts when it ends.
+  void _startProgressFor(MomentStory story) {
+    _videoMode = story.mediaType == 'video' && story.mediaUrl != null;
+    _videoLength = null;
+    if (_videoMode) {
+      _progress.stop();
+      _progress.value = 0;
+      return;
+    }
+    _progress.duration = kStoryPhotoLength;
+    _progress.forward(from: 0);
+    if (_paused) _progress.stop();
+  }
+
+  void _onVideoDuration(String storyId, Duration length) {
+    if (!_videoMode || storyId != _story.id) return;
+    _videoLength =
+        length > kStoryVideoMaxLength ? kStoryVideoMaxLength : length;
+  }
+
+  void _onVideoPosition(String storyId, Duration position) {
+    if (!_videoMode || storyId != _story.id) return;
+    final length = _videoLength;
+    if (length == null || length.inMicroseconds == 0) return;
+    final fraction =
+        (position.inMicroseconds / length.inMicroseconds).clamp(0.0, 1.0);
+    _progress.value = fraction.toDouble();
+    if (fraction >= 1.0) _next();
+  }
+
+  /// A video that will not load: show the story for the photo length instead.
+  void _onVideoError(String storyId) {
+    if (storyId != _story.id) return;
+    _videoMode = false;
+    _videoLength = null;
+    _progress.duration = kStoryPhotoLength;
+    _progress.forward(from: 0);
+    if (_paused) _progress.stop();
   }
 
   // ---------------------------------------------------------------------------
@@ -252,7 +305,13 @@ class _StoryViewerPageState extends State<StoryViewerPage>
               onTapUp: _onTapUp,
               onLongPressStart: (_) => _setHolding(true),
               onLongPressEnd: (_) => _setHolding(false),
-              child: _StoryBody(story: story),
+              child: _StoryBody(
+                story: story,
+                paused: _paused,
+                onVideoDuration: (d) => _onVideoDuration(story.id, d),
+                onVideoPosition: (p) => _onVideoPosition(story.id, p),
+                onVideoError: () => _onVideoError(story.id),
+              ),
             ),
           ),
           SafeArea(
@@ -438,9 +497,19 @@ class _StoryViewerPageState extends State<StoryViewerPage>
 /// The picture or text of one story. Photos keep the scale, offset and
 /// rotation saved when the story was made.
 class _StoryBody extends StatelessWidget {
-  const _StoryBody({required this.story});
+  const _StoryBody({
+    required this.story,
+    this.paused = false,
+    this.onVideoDuration,
+    this.onVideoPosition,
+    this.onVideoError,
+  });
 
   final MomentStory story;
+  final bool paused;
+  final ValueChanged<Duration>? onVideoDuration;
+  final ValueChanged<Duration>? onVideoPosition;
+  final VoidCallback? onVideoError;
 
   @override
   Widget build(BuildContext context) {
@@ -461,6 +530,12 @@ class _StoryBody extends StatelessWidget {
               fit: BoxFit.cover,
               autoPlayWhenVisible: true,
               startMuted: false,
+              looping: false,
+              paused: paused,
+              maxPlayback: kStoryVideoMaxLength,
+              onDuration: onVideoDuration,
+              onPosition: onVideoPosition,
+              onError: onVideoError,
             ),
           ),
           if (caption != null)

@@ -73,12 +73,12 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
     }
   }
 
-  /// Gallery only. Story clips are limited to 30 seconds.
+  /// Gallery only. Story videos play at most 59 seconds.
   Future<void> _pickVideo() async {
     try {
       final picked = await _picker.pickVideo(
         source: ImageSource.gallery,
-        maxDuration: const Duration(seconds: 30),
+        maxDuration: kStoryVideoMaxLength,
       );
       if (picked != null && mounted) {
         setState(() {

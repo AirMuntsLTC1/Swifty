@@ -1,0 +1,29 @@
+CHANGES: video posters, story timing (15 s photos, 59 s video cap)
+==================================================================
+
+NO NEW MIGRATION. Run nothing new in Supabase for this version.
+
+OPTIONAL (old videos may have a black poster stored):
+  In Supabase SQL Editor, this clears stored posters so the app makes a
+  new one from each video (taken a little way in, not the black first frame):
+    update public.post_media set thumbnail_url = null where kind = 'video';
+
+pubspec.yaml: no change (video_player, video_thumbnail, path_provider and
+  visibility_detector were added in v3). Run flutter pub get anyway.
+
+POSTERS
+  lib/helper/video_thumbnail_helper.dart  frame taken ~20% in (min 0.5 s, max 3 s);
+                                          posterFor() makes a poster from a video URL
+  lib/widgets/video/video_poster.dart     NEW: stored thumbnail -> generated poster -> grey tile
+  No black placeholders anywhere.
+
+STORY TIMING
+  Photos and text: 15 seconds.
+  Video: the bar follows the video's own length; the next story starts when it ends.
+  Videos longer than 59 seconds are cut at 59 seconds.
+  Story composer picks videos up to 59 seconds.
+  Long-press or reply box pauses the video and the bar.
+
+PLAYER
+  looping, paused, maxPlayback, onDuration, onPosition, onError parameters.
+  Posts and feed: unchanged (loop, autoplay muted, tap opens thread).
