@@ -10,3 +10,6 @@
 
 # Keep Kotlin metadata so reflection-based libraries keep working.
 -keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+
+-dontwarn com.google.android.play.core.**
+-dontwarn io.flutter.app.FlutterPlayStoreSplitApplication
