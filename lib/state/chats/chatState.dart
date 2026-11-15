@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_chat_delete.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:flutter_twitter_clone/helper/utility.dart';
@@ -92,7 +93,10 @@ class ChatState extends AppState {
   /// Load the inbox: latest message with each person.
   Future<void> getUserChatList(String userId) async {
     try {
-      final rows = await _repo.fetchInboxRows(userId);
+      final hidden = await _repo.fetchHiddenMessageIds(userId);
+      final rows = (await _repo.fetchInboxRows(userId))
+          .where((r) => !hidden.contains(r['id']?.toString()))
+          .toList();
       if (_myId != null && _myId != userId) return;
       final latest = <String, Map<String, dynamic>>{};
       for (final row in rows) {
@@ -122,7 +126,10 @@ class ChatState extends AppState {
     final other = _chatUser?.userId ?? _otherId;
     if (me == null || other == null) return;
     try {
-      final rows = await _repo.fetchConversation(me, other);
+      final hidden = await _repo.fetchHiddenMessageIds(me);
+      final rows = (await _repo.fetchConversation(me, other))
+          .where((r) => !hidden.contains(r['id']?.toString()))
+          .toList();
       if (_myId != me || (_chatUser?.userId ?? _otherId) != other) return;
       _messageList = rows.map(_fromRow).toList();
       notifyListeners();
@@ -168,6 +175,28 @@ class ChatState extends AppState {
     }
     _otherId = null;
     notifyListeners();
+  }
+
+  /// Hide these conversations for the signed-in user. Messages are removed
+  /// from the database once both people have hidden them.
+  Future<void> deleteConversations(List<String> others) async {
+    final me = _myId;
+    if (me == null || others.isEmpty) return;
+    final ids = others.toSet();
+    _chatUserList?.removeWhere((x) => ids.contains(x.key));
+    if (_chatUser?.userId != null && ids.contains(_chatUser!.userId)) {
+      _messageList = null;
+    }
+    notifyListeners();
+    try {
+      for (final other in ids) {
+        await _repo.deleteConversation(other);
+      }
+    } catch (error) {
+      await getUserChatList(me);
+      rethrow;
+    }
+    await getUserChatList(me);
   }
 
   /// Kept for existing callers. FCM push delivery is handled server-side.

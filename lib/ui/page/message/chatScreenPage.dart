@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_twitter_clone/ui/page/message/widgets/conversation_intro.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/chatModel.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
@@ -47,14 +48,9 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
 
   Widget _chatScreenBody() {
     final state = Provider.of<ChatState>(context);
-    if (state.messageList == null || state.messageList!.isEmpty) {
-      return const Center(
-        child: Text(
-          'No message found',
-          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-        ),
-      );
-    }
+    final list = state.messageList;
+    if (list == null) return const SizedBox.shrink();
+    if (list.isEmpty) return ConversationIntro(user: state.chatUser!);
     return ListView.builder(
       controller: _controller,
       shrinkWrap: true,
