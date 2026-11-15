@@ -48,7 +48,7 @@ class ProfileImageView extends StatelessWidget {
                     child: Text(choice.title,
                         style: TextStyles.textStyle14.copyWith(
                           color: choice.isEnable
-                              ? AppColor.secondary.withValues(alpha: .9)
+                              ? AppColor.secondary.withOpacity(.9)
                               : AppColor.lightGrey,
                         )));
               }).toList();

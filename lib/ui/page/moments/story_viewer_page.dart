@@ -454,11 +454,11 @@ class _StoryBody extends StatelessWidget {
           Transform(
             alignment: Alignment.center,
             transform: Matrix4.identity()
-              ..translateByDouble(story.photoDx, story.photoDy, 0, 1)
+              ..translate(story.photoDx, story.photoDy)
               // photo_rotation is treated as degrees. Check this matches the
               // value your story editor saves.
               ..rotateZ(story.photoRotation * math.pi / 180)
-              ..scaleByDouble(story.photoScale, story.photoScale, story.photoScale, 1),
+              ..scale(story.photoScale),
             child: CacheImage(path: url, fit: BoxFit.cover),
           ),
           if (caption != null)

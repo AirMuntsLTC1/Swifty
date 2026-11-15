@@ -24,7 +24,7 @@ class UnavailableTweet extends StatelessWidget {
               : 16),
       alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
-        color: AppColor.extraLightGrey.withValues(alpha: .3),
+        color: AppColor.extraLightGrey.withOpacity(.3),
         border: Border.all(color: AppColor.extraLightGrey, width: .5),
         borderRadius: const BorderRadius.all(Radius.circular(10)),
       ),
@@ -34,7 +34,7 @@ class UnavailableTweet extends StatelessWidget {
               child: LinearProgressIndicator(
                 backgroundColor: AppColor.extraLightGrey,
                 valueColor: AlwaysStoppedAnimation(
-                  AppColor.darkGrey.withValues(alpha: .3),
+                  AppColor.darkGrey.withOpacity(.3),
                 ),
               ),
             )

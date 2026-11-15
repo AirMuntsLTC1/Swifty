@@ -108,7 +108,7 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                   decoration: BoxDecoration(
                     color: _canPost
                         ? AppColor.primary
-                        : AppColor.lightGrey.withValues(alpha: 0.4),
+                        : AppColor.lightGrey.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(

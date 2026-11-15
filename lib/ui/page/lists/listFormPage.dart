@@ -234,7 +234,7 @@ class _ListFormPageState extends State<ListFormPage> {
           _card(
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              activeThumbColor: AppColor.primary,
+              activeColor: AppColor.primary,
               value: _isPrivate,
               onChanged: (v) => setState(() => _isPrivate = v),
               title: Text('Private list', style: listTitleStyle(size: 16)),
@@ -253,7 +253,7 @@ class _ListFormPageState extends State<ListFormPage> {
               onPressed: _saving ? null : _save,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColor.primary,
-                disabledBackgroundColor: AppColor.primary.withValues(alpha: 0.5),
+                disabledBackgroundColor: AppColor.primary.withOpacity(0.5),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
