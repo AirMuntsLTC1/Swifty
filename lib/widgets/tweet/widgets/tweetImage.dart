@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/state/feedState.dart';
+import 'package:flutter_twitter_clone/ui/page/feed/feedPostDetail.dart';
+import 'package:flutter_twitter_clone/ui/page/feed/imageViewPage.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:provider/provider.dart';
@@ -32,10 +34,24 @@ class TweetImage extends StatelessWidget {
                   if (type == TweetType.ParentTweet) {
                     return;
                   }
-                  var state = Provider.of<FeedState>(context, listen: false);
-                  state.getPostDetailFromDatabase(model.key, model: model);
-                  state.setTweetToReply = model;
-                  Navigator.pushNamed(context, '/ImageViewPge');
+                  final state = Provider.of<FeedState>(context, listen: false);
+                  // A photo inside a thread or on a reply opens the previewer.
+                  if (type == TweetType.Detail || type == TweetType.Reply) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ImageViewPge(model: model),
+                      ),
+                    );
+                    return;
+                  }
+                  // A photo in the feed, on a profile or in a retweet opens
+                  // the post thread, the same as tapping the post.
+                  if (type == TweetType.Tweet) {
+                    state.clearAllDetailAndReplyTweetStack();
+                  }
+                  state.getPostDetailFromDatabase(null, model: model);
+                  Navigator.push(context, FeedPostDetail.getRoute(model.key!));
                 },
                 child: ClipRRect(
                   borderRadius: BorderRadius.all(
@@ -62,5 +78,7 @@ class TweetImage extends StatelessWidget {
     );
   }
 }
+
+
 
 
