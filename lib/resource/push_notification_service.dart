@@ -1,95 +1,95 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:flutter_twitter_clone/helper/utility.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+
+import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/model/push_notification_model.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // If you're going to use other Firebase services in the background, such as Firestore,
-  // make sure you call `initializeApp` before using other Firebase services.
-  cprint("Handling a background message: ${message.messageId}");
-}
-
+/// Push delivery uses FCM only as the device transport. Notifications are
+/// stored in Supabase and sent by the `push-notify` Edge Function, which
+/// reads device tokens from `user_devices`. This class saves the device token
+/// and forwards notification taps to the UI.
 class PushNotificationService {
-  final FirebaseMessaging _firebaseMessaging;
-
-  PushNotificationService(this._firebaseMessaging) {
-    initializeMessages();
+  PushNotificationService() {
+    _init();
   }
 
-  late PublishSubject<PushNotificationModel> _pushNotificationSubject;
+  final StreamController<PushNotificationModel> _controller =
+      StreamController<PushNotificationModel>.broadcast();
 
   Stream<PushNotificationModel> get pushNotificationResponseStream =>
-      _pushNotificationSubject.stream;
+      _controller.stream;
 
-  // ignore: unused_field, cancel_subscriptions
-  late StreamSubscription<RemoteMessage> _backgroundMessageSubscription;
+  StreamSubscription<RemoteMessage>? _openedSub;
+  StreamSubscription<String>? _tokenSub;
 
-  void initializeMessages() {
-    // _firebaseMessaging.requestNotificationPermissions(
-    //     const IosNotificationSettings(sound: true, badge: true, alert: true));
-    configure();
-  }
-
-  /// Configured from Home page
-  void configure() async {
-    _pushNotificationSubject = PublishSubject<PushNotificationModel>();
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      cprint('Got a message whilst in the foreground!');
-
-      try {
-        // var data = json.decode(message.data.toString()) as Map<String, dynamic>;
-        myBackgroundMessageHandler(message.data, onMessage: true);
-      } catch (e) {
-        cprint(e, errorIn: "On Message");
-      }
-    });
-
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    /// Get message when the app is in the Terminated form
-    FirebaseMessaging.instance.getInitialMessage().then((event) {
-      if (event != null) {
-        try {
-          myBackgroundMessageHandler(event.data, onLaunch: true);
-        } catch (e) {
-          cprint(e, errorIn: "On getInitialMessage");
-        }
-      }
-    });
-
-    /// Returns a [Stream] that is called when a user presses a notification message displayed via FCM.
-    _backgroundMessageSubscription =
-        FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage? event) {
-      if (event != null) {
-        try {
-          myBackgroundMessageHandler(event.data, onLaunch: true);
-        } catch (e) {
-          cprint(e, errorIn: "On onMessageOpenedApp");
-        }
-      }
-    });
-  }
-
-  /// Return FCM token
-  Future<String?> getDeviceToken() async {
-    final token = await _firebaseMessaging.getToken();
-    return token;
-  }
-
-  /// Callback triger everytime a push notification is received
-  void myBackgroundMessageHandler(Map<String, dynamic> message,
-      {bool onBackGround = false,
-      bool onLaunch = false,
-      bool onMessage = false,
-      bool onResume = false}) async {
+  Future<void> _init() async {
     try {
-      if (!onMessage) {
-        PushNotificationModel model = PushNotificationModel.fromJson(message);
-        _pushNotificationSubject.add(model);
-      }
+      final messaging = FirebaseMessaging.instance;
+      await messaging.requestPermission();
+      _openedSub = FirebaseMessaging.onMessageOpenedApp.listen(_emit);
+      _tokenSub = messaging.onTokenRefresh.listen((token) {
+        _register(token);
+      });
+      final initial = await messaging.getInitialMessage();
+      if (initial != null) _emit(initial);
+      await registerCurrentDeviceToken();
     } catch (error) {
-      cprint(error, errorIn: "myBackgroundMessageHandler");
+      debugPrint('Push notifications not available: $error');
     }
+  }
+
+  /// Save this device's FCM token in Supabase (`user_devices`).
+  static Future<void> registerCurrentDeviceToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) await _register(token);
+    } catch (error) {
+      debugPrint('Could not register push token: $error');
+    }
+  }
+
+  static Future<void> _register(String token) {
+    final platform = Platform.isIOS ? 'ios' : 'android';
+    return SupabaseRepository.instance.registerPushToken(token, platform);
+  }
+
+  void _emit(RemoteMessage message) {
+    final kind = message.data['kind']?.toString() ?? '';
+    _controller.add(PushNotificationModel(
+      id: message.messageId ?? '',
+      type: _typeFor(kind),
+      receiverId: SupabaseRepository.instance.uid ?? '',
+      senderId: message.data['sender_id']?.toString() ?? '',
+      title: message.notification?.title ?? '',
+      body: message.notification?.body ?? '',
+      tweetId: message.data['post_id']?.toString() ?? '',
+    ));
+  }
+
+  String _typeFor(String kind) {
+    switch (kind) {
+      case 'message':
+        return NotificationType.Message.toString();
+      case 'mention':
+        return NotificationType.Mention.toString();
+      case 'follow':
+        return NotificationType.Follow.toString();
+      case 'comment':
+        return NotificationType.Reply.toString();
+      case 'like':
+        return NotificationType.Like.toString();
+      default:
+        return NotificationType.Tweet.toString();
+    }
+  }
+
+  void dispose() {
+    _openedSub?.cancel();
+    _tokenSub?.cancel();
+    _controller.close();
   }
 }

@@ -75,7 +75,7 @@ class _UserTile extends StatelessWidget {
     return ListTile(
       onTap: () {
         if (kReleaseMode) {
-          kAnalytics.logViewSearchResults(searchTerm: user.userName!);
+          // analytics removed
         }
         Navigator.push(context, ProfilePage.getRoute(profileId: user.userId!));
       },

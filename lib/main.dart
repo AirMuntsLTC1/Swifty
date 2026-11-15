@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/state/suggestionUserState.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,7 +20,9 @@ import 'state/notificationState.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Supabase: auth, database, realtime and storage.
   await SupabaseAuthService.initialize();
+  // Firebase: only used for the device push token (FCM).
   try {
     await Firebase.initializeApp();
   } catch (e) {
@@ -47,7 +50,7 @@ class MyApp extends StatelessWidget {
             create: (_) => SuggestionsState()),
       ],
       child: MaterialApp(
-        title: 'Fwitter',
+        title: 'Swifly',
         theme: AppTheme.appTheme.copyWith(
           textTheme: GoogleFonts.mulishTextTheme(
             Theme.of(context).textTheme,

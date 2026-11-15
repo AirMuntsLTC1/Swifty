@@ -12,8 +12,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/newWidget/customLoader.dart';
 
-final kAnalytics = FirebaseAnalytics.instance;
-final DatabaseReference kDatabase = FirebaseDatabase.instance.ref();
 final kScreenLoader = CustomLoader();
 void cprint(dynamic data,
     {String? errorIn, String? event, String label = 'Log'}) {
@@ -33,6 +31,18 @@ void cprint(dynamic data,
       Utility.logEvent(event, parameter: {});
     }
   }
+}
+
+/// Base URL used when sharing tweets and profiles. Change it to your domain.
+const String kShareBaseUrl = 'https://swifly.app';
+
+/// Metadata for shared links (title, description, image).
+class SocialMetaTagParameters {
+  const SocialMetaTagParameters({this.title, this.description, this.imageUrl});
+
+  final String? title;
+  final String? description;
+  final Uri? imageUrl;
 }
 
 class Utility {
@@ -155,9 +165,9 @@ class Utility {
   }
 
   static void logEvent(String event, {Map<String, String>? parameter}) {
-    kReleaseMode
-        ? kAnalytics.logEvent(name: event, parameters: parameter)
-        : print("[EVENT]: $event");
+    if (kDebugMode) {
+      print("[EVENT]: $event ${parameter ?? ''}");
+    }
   }
 
   static void debugLog(String log, {dynamic param = ""}) {
@@ -243,22 +253,12 @@ class Utility {
     return status;
   }
 
+  /// Share link for a tweet or profile. Swifly has no dynamic-links service,
+  /// so the link is a plain https URL built from [kShareBaseUrl].
   static Future<Uri> createLinkToShare(BuildContext context, String id,
       {required SocialMetaTagParameters socialMetaTagParameters}) async {
-    final DynamicLinkParameters parameters = DynamicLinkParameters(
-      uriPrefix: 'https://fwitter.page.link',
-      link: Uri.parse('https://twitter.com/$id'),
-      androidParameters: AndroidParameters(
-        packageName: 'com.thealphamerc.flutter_twitter_clone_dev',
-        minimumVersion: 0,
-      ),
-      socialMetaTagParameters: socialMetaTagParameters,
-    );
-    Uri url;
-    final ShortDynamicLink shortLink =
-        await FirebaseDynamicLinks.instance.buildShortLink(parameters);
-    url = shortLink.shortUrl;
-    return url;
+    final clean = id.replaceAll(RegExp(r'^/+|/+$'), '');
+    return Uri.parse('$kShareBaseUrl/$clean');
   }
 
   static createLinkAndShare(BuildContext context, String id,

@@ -2,30 +2,31 @@
 
 import 'dart:async';
 
-import 'package:firebase_database/firebase_database.dart' as dabase;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../helper/utility.dart';
-import '../model/feedModel.dart';
-import '../model/notificationModel.dart';
-import '../model/user.dart';
-import '../resource/push_notification_service.dart';
-import '../ui/page/common/locator.dart';
-import 'appState.dart';
+import 'package:flutter_twitter_clone/helper/constant.dart';
+import 'package:flutter_twitter_clone/helper/enum.dart';
+import 'package:flutter_twitter_clone/helper/utility.dart';
+import 'package:flutter_twitter_clone/model/feedModel.dart';
+import 'package:flutter_twitter_clone/model/notificationModel.dart';
+import 'package:flutter_twitter_clone/model/user.dart';
+import 'package:flutter_twitter_clone/resource/push_notification_service.dart';
+import 'package:flutter_twitter_clone/state/appState.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
+import 'package:flutter_twitter_clone/ui/page/common/locator.dart';
 
+/// Activity list (likes, comments, follows, mentions). Stored in the
+/// `notifications` table; the database triggers create most rows.
 class NotificationState extends AppState {
-  // String fcmToken;
-  // FeedModel notificationTweetModel;
-
-  // FcmNotificationModel notification;
-  // String notificationSenderId;
-  dabase.Query? query;
   List<UserModel> userList = [];
 
   List<NotificationModel>? _notificationList;
+  RealtimeChannel? _channel;
 
-  addNotificationList(NotificationModel model) {
+  SupabaseRepository get _repo => SupabaseRepository.instance;
+
+  void addNotificationList(NotificationModel model) {
     _notificationList ??= <NotificationModel>[];
-
     if (!_notificationList!.any((element) => element.id == model.id)) {
       _notificationList!.insert(0, model);
     }
@@ -33,141 +34,154 @@ class NotificationState extends AppState {
 
   List<NotificationModel>? get notificationList => _notificationList;
 
-  /// [Intitilise firebase notification kDatabase]
-  Future<bool> databaseInit(String userId) {
+  /// Subscribe to new notifications for [userId].
+  Future<bool> databaseInit(String userId) async {
     try {
-      if (query != null) {
-        query!.onValue.drain();
-        query = null;
-        _notificationList = null;
+      if (_channel != null) {
+        await _repo.db.removeChannel(_channel!);
+        _channel = null;
       }
-      query = kDatabase.child("notification").child(userId);
-      query!.onChildAdded.listen(_onNotificationAdded);
-      query!.onChildChanged.listen(_onNotificationChanged);
-      query!.onChildRemoved.listen(_onNotificationRemoved);
-
-      return Future.value(true);
+      _channel = _repo.db.channel('notifications-$userId')
+        ..onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (_) {
+            getDataFromDatabase(userId, force: true);
+          },
+        )
+        ..subscribe();
+      return true;
     } catch (error) {
       cprint(error, errorIn: 'databaseInit');
-      return Future.value(false);
+      return false;
     }
   }
 
-  /// get [Notification list] from firebase realtime database
-  void getDataFromDatabase(String userId) {
+  /// Load notifications. Likes are grouped by post and follows by user.
+  Future<void> getDataFromDatabase(String userId, {bool force = false}) async {
+    if (_notificationList != null && !force) return;
+    isBusy = true;
     try {
-      if (_notificationList != null) {
-        return;
-      }
-      isBusy = true;
-      kDatabase
-          .child('notification')
-          .child(userId)
-          .once()
-          .then((DatabaseEvent event) {
-        final snapshot = event.snapshot;
-        if (snapshot.value != null) {
-          var map = snapshot.value as Map<dynamic, dynamic>?;
-          if (map != null) {
-            map.forEach((tweetKey, value) {
-              var map = value as Map<dynamic, dynamic>;
-              var model = NotificationModel.fromJson(tweetKey, map);
-              addNotificationList(model);
-            });
-            _notificationList!
-                .sort((x, y) => x.timeStamp!.compareTo(y.timeStamp!));
-          }
-        }
-        isBusy = false;
-      });
+      final rows = await _repo.fetchNotifications(userId);
+      _notificationList = _group(rows);
     } catch (error) {
-      isBusy = false;
       cprint(error, errorIn: 'getDataFromDatabase');
+    } finally {
+      isBusy = false;
+      notifyListeners();
     }
   }
 
-  /// get `Tweet` present in notification
-  Future<FeedModel?> getTweetDetail(String tweetId) async {
-    FeedModel _tweetDetail;
-    var event = await kDatabase.child('tweet').child(tweetId).once();
-    if (event.snapshot.value != null) {
-      var map = event.snapshot.value as Map<dynamic, dynamic>;
-      _tweetDetail = FeedModel.fromJson(map);
-      _tweetDetail.key = event.snapshot.key!;
-      return _tweetDetail;
-    } else {
-      return null;
+  List<NotificationModel> _group(List<Map<String, dynamic>> rows) {
+    final seen = <String>{};
+    final result = <NotificationModel>[];
+    for (final row in rows) {
+      final rawType = row['type']?.toString() ?? '';
+      final type = _typeFor(rawType);
+      final postId = row['post_id']?.toString();
+      final actorId = row['actor_id']?.toString() ?? '';
+      final isFollow = type == NotificationType.Follow.toString();
+
+      // Messages are shown in the chat tab, not here.
+      if (type == NotificationType.Message.toString()) continue;
+      if (!isFollow && postId == null) continue;
+
+      final groupKey = isFollow ? 'follow:$actorId' : 'post:$postId:$type';
+      if (!seen.add(groupKey)) continue;
+
+      final createdAt = row['created_at']?.toString();
+      final data = isFollow
+          ? <String, dynamic>{
+              'userId': actorId,
+              'displayName': (row['actor_name'] ?? '').toString(),
+              'userName': '@${(row['actor_handle'] ?? '').toString()}',
+              'profilePic': (row['avatar_url'] ?? '').toString().isNotEmpty
+                  ? row['avatar_url'].toString()
+                  : Constants.dummyProfilePic,
+              'bio': '',
+              'isVerified': false,
+            }
+          : <String, dynamic>{};
+
+      result.add(NotificationModel(
+        id: row['id'].toString(),
+        tweetKey: postId,
+        type: type,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+        data: data,
+      ));
+    }
+    return result;
+  }
+
+  String _typeFor(String raw) {
+    switch (raw) {
+      case 'like':
+        return NotificationType.Like.toString();
+      case 'comment':
+      case 'reply':
+        return NotificationType.Reply.toString();
+      case 'follow':
+        return NotificationType.Follow.toString();
+      case 'mention':
+        return NotificationType.Mention.toString();
+      case 'message':
+        return NotificationType.Message.toString();
+      case 'retweet':
+        return NotificationType.Retweet.toString();
+      default:
+        return NotificationType.Tweet.toString();
     }
   }
 
-  /// get user who liked your tweet
+  /// Get a post referenced by a notification.
+  Future<FeedModel?> getTweetDetail(String tweetId) =>
+      _repo.fetchPost(tweetId);
+
+  /// Get the user who liked / followed.
   Future<UserModel?> getUserDetail(String userId) async {
-    UserModel user;
-    if (userList.isNotEmpty && userList.any((x) => x.userId == userId)) {
-      return Future.value(userList.firstWhere((x) => x.userId == userId));
-    }
-    var event = await kDatabase.child('profile').child(userId).once();
-
-    if (event.snapshot.value != null) {
-      var map = event.snapshot.value as Map<dynamic, dynamic>;
-      user = UserModel.fromJson(map);
-      user.key = event.snapshot.key!;
-      userList.add(user);
-      return user;
-    } else {
-      return null;
-    }
+    final cached = userList.where((x) => x.userId == userId);
+    if (cached.isNotEmpty) return cached.first;
+    final user = await _repo.fetchUser(userId);
+    if (user != null) userList.add(user);
+    return user;
   }
 
-  /// Remove notification if related Tweet is not found or deleted
+  /// Remove the notifications for a post that was deleted or is not available.
   void removeNotification(String userId, String tweetkey) async {
-    kDatabase.child('notification').child(userId).child(tweetkey).remove();
-  }
-
-  /// Trigger when somneone like your tweet
-  void _onNotificationAdded(DatabaseEvent event) {
-    if (event.snapshot.value != null) {
-      var map = event.snapshot.value as Map<dynamic, dynamic>;
-      var model = NotificationModel.fromJson(event.snapshot.key!, map);
-
-      addNotificationList(model);
-      // added notification to list
-      print("Notification added");
+    try {
+      await _repo.deleteNotificationsForPost(userId, tweetkey);
+      _notificationList?.removeWhere((x) => x.tweetKey == tweetkey);
       notifyListeners();
+    } catch (error) {
+      cprint(error, errorIn: 'removeNotification');
     }
   }
 
-  /// Trigger when someone changed his like preference
-  void _onNotificationChanged(DatabaseEvent event) {
-    if (event.snapshot.value != null) {
-      notifyListeners();
-      print("Notification changed");
-    }
-  }
-
-  /// Trigger when someone undo his like on tweet
-  void _onNotificationRemoved(DatabaseEvent event) {
-    if (event.snapshot.value != null) {
-      var map = event.snapshot.value as Map<dynamic, dynamic>;
-      var model = NotificationModel.fromJson(event.snapshot.key!, map);
-      // remove notification from list
-      _notificationList!.removeWhere((x) => x.tweetKey == model.tweetKey);
-      notifyListeners();
-      print("Notification Removed");
-    }
-  }
-
-  /// Initilise push notification services
+  /// Start the push service once. Registers the device token.
   void initFirebaseService() {
     if (!getIt.isRegistered<PushNotificationService>()) {
       getIt.registerSingleton<PushNotificationService>(
-          PushNotificationService(FirebaseMessaging.instance));
+          PushNotificationService());
     }
   }
 
   @override
   void dispose() {
-    getIt.unregister<PushNotificationService>();
+    if (_channel != null) {
+      _repo.db.removeChannel(_channel!);
+      _channel = null;
+    }
+    if (getIt.isRegistered<PushNotificationService>()) {
+      getIt.unregister<PushNotificationService>();
+    }
     super.dispose();
   }
 }

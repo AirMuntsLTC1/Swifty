@@ -3,21 +3,19 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
-import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/push_notification_model.dart';
 import 'package:flutter_twitter_clone/resource/push_notification_service.dart';
 import 'package:flutter_twitter_clone/state/appState.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
 import 'package:flutter_twitter_clone/state/chats/chatState.dart';
-import 'package:flutter_twitter_clone/state/suggestionUserState.dart';
 import 'package:flutter_twitter_clone/state/feedState.dart';
 import 'package:flutter_twitter_clone/state/notificationState.dart';
 import 'package:flutter_twitter_clone/state/searchState.dart';
+import 'package:flutter_twitter_clone/state/suggestionUserState.dart';
 import 'package:flutter_twitter_clone/ui/page/feed/feedPage.dart';
 import 'package:flutter_twitter_clone/ui/page/feed/feedPostDetail.dart';
 import 'package:flutter_twitter_clone/ui/page/feed/suggestedUsers.dart';
 import 'package:flutter_twitter_clone/ui/page/message/chatListPage.dart';
-import 'package:flutter_twitter_clone/ui/page/profile/profilePage.dart';
 import 'package:flutter_twitter_clone/widgets/bottomMenuBar/bottomMenuBar.dart';
 import 'package:provider/provider.dart';
 
@@ -36,146 +34,87 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
   int pageIndex = 0;
-  // ignore: cancel_subscription
-  late StreamSubscription<PushNotificationModel> pushNotificationSubscription;
+  StreamSubscription<PushNotificationModel>? pushNotificationSubscription;
+
   @override
   void initState() {
-    initDynamicLinks();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      var state = Provider.of<AppState>(context, listen: false);
-      state.setPageIndex = 0;
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      Provider.of<AppState>(context, listen: false).setPageIndex = 0;
+
+      // Load the signed-in user first; the other states use its id.
+      final authState = Provider.of<AuthState>(context, listen: false);
+      await authState.getCurrentUser();
+      if (!mounted) return;
+
       initTweets();
       initProfile();
       initSearch();
       initNotification();
       initChat();
     });
-
-    super.initState();
   }
 
   @override
   void dispose() {
-    pushNotificationSubscription.cancel();
+    pushNotificationSubscription?.cancel();
     super.dispose();
   }
 
   void initTweets() {
-    var state = Provider.of<FeedState>(context, listen: false);
+    final state = Provider.of<FeedState>(context, listen: false);
     state.databaseInit();
     state.getDataFromDatabase();
   }
 
   void initProfile() {
-    var state = Provider.of<AuthState>(context, listen: false);
+    final state = Provider.of<AuthState>(context, listen: false);
     state.databaseInit();
   }
 
   void initSearch() {
-    var searchState = Provider.of<SearchState>(context, listen: false);
+    final searchState = Provider.of<SearchState>(context, listen: false);
     searchState.getDataFromDatabase();
   }
 
   void initNotification() {
-    var state = Provider.of<NotificationState>(context, listen: false);
-    var authState = Provider.of<AuthState>(context, listen: false);
+    final state = Provider.of<NotificationState>(context, listen: false);
+    final authState = Provider.of<AuthState>(context, listen: false);
     state.databaseInit(authState.userId);
+    state.getDataFromDatabase(authState.userId);
 
-    /// configure push notifications
+    // Start push (device token + tap handling).
     state.initFirebaseService();
-
-    /// Subscribe the push notifications
-    /// Whenever devices receive push notification, `listenPushNotification` callback will trigger.
     pushNotificationSubscription = getIt<PushNotificationService>()
         .pushNotificationResponseStream
         .listen(listenPushNotification);
   }
 
-  /// Listen for every push notifications when app is in background
-  /// Check for push notifications when app is launched by tapping on push notifications from system tray.
-  /// If notification type is `NotificationType.Message` then chat screen will open
-  /// If notification type is `NotificationType.Mention` then user profile will open who tagged/mentioned you in a tweet
+  /// Push taps: messages open the chat tab, mentions open the post,
+  /// everything else opens the notifications tab.
   void listenPushNotification(PushNotificationModel model) {
-    final authState = Provider.of<AuthState>(context, listen: false);
-    var state = Provider.of<NotificationState>(context, listen: false);
-
-    /// Check if user receive chat notification
-    /// Redirect to chat screen
-    /// `model.data.senderId` is a user id who sends you a message
-    /// `model.data.receiverId` is a your user id.
-    if (model.type == NotificationType.Message.toString() &&
-        model.receiverId == authState.user!.uid) {
-      /// Get sender profile detail from firebase
-      state.getUserDetail(model.senderId).then((user) {
-        final chatState = Provider.of<ChatState>(context, listen: false);
-        chatState.setChatUser = user!;
-        Navigator.pushNamed(context, '/ChatScreenPage');
-      });
-    }
-
-    /// Checks for user tag tweet notification
-    /// Redirect user to tweet detail if
-    /// Tweet contains
-    /// If you are mentioned in tweet then it redirect to user profile who mentioned you in a tweet
-    /// You can check that tweet on his profile timeline
-    /// `model.data.senderId` is user id who tagged you in a tweet
-    else if (model.type == NotificationType.Mention.toString() &&
-        model.receiverId == authState.user!.uid) {
-      var feedState = Provider.of<FeedState>(context, listen: false);
+    final appState = Provider.of<AppState>(context, listen: false);
+    if (model.type == NotificationType.Message.toString()) {
+      appState.setPageIndex = 3;
+    } else if (model.type == NotificationType.Mention.toString() &&
+        model.tweetId.isNotEmpty) {
+      final feedState = Provider.of<FeedState>(context, listen: false);
       feedState.getPostDetailFromDatabase(model.tweetId);
       Navigator.push(context, FeedPostDetail.getRoute(model.tweetId));
+    } else {
+      appState.setPageIndex = 2;
     }
   }
 
   void initChat() {
     final chatState = Provider.of<ChatState>(context, listen: false);
-    final state = Provider.of<AuthState>(context, listen: false);
-    chatState.databaseInit(state.userId, state.userId);
-
-    /// It will update fcm token in database
-    /// fcm token is required to send firebase notification
-    state.updateFCMToken();
-
-    /// It get fcm server key
-    /// Server key is required to configure firebase notification
-    /// Without fcm server notification can not be sent
+    final authState = Provider.of<AuthState>(context, listen: false);
+    // Inbox subscription: other user is the same as me.
+    chatState.databaseInit(authState.userId, authState.userId);
+    chatState.getUserChatList(authState.userId);
+    authState.updateFCMToken();
     chatState.getFCMServerKey();
-  }
-
-  /// Initialize the firebase dynamic link sdk
-  void initDynamicLinks() async {
-    FirebaseDynamicLinks.instance.onLink.listen(
-        (PendingDynamicLinkData? dynamicLink) async {
-      final Uri? deepLink = dynamicLink?.link;
-
-      if (deepLink != null) {
-        redirectFromDeepLink(deepLink);
-      }
-    }, onError: (e) async {
-      cprint(e.message, errorIn: "onLinkError");
-    });
-
-    final PendingDynamicLinkData? data =
-        await FirebaseDynamicLinks.instance.getInitialLink();
-    final Uri? deepLink = data?.link;
-
-    if (deepLink != null) {
-      redirectFromDeepLink(deepLink);
-    }
-  }
-
-  /// Redirect user to specific screen when app is launched by tapping on deep link.
-  void redirectFromDeepLink(Uri deepLink) {
-    cprint("Found Url from share: ${deepLink.path}");
-    var type = deepLink.path.split("/")[1];
-    var id = deepLink.path.split("/")[2];
-    if (type == "profilePage") {
-      Navigator.push(context, ProfilePage.getRoute(profileId: id));
-    } else if (type == "tweet") {
-      var feedState = Provider.of<FeedState>(context, listen: false);
-      feedState.getPostDetailFromDatabase(id);
-      Navigator.push(context, FeedPostDetail.getRoute(id));
-    }
   }
 
   Widget _body() {
@@ -200,7 +139,10 @@ class _HomePageState extends State<HomePage> {
       case 3:
         return ChatListPage(scaffoldKey: _scaffoldKey);
       default:
-        return FeedPage(scaffoldKey: _scaffoldKey);
+        return FeedPage(
+          scaffoldKey: _scaffoldKey,
+          refreshIndicatorKey: refreshIndicatorKey,
+        );
     }
   }
 
@@ -226,7 +168,7 @@ class _HomePageState extends State<HomePage> {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(
-        DiagnosticsProperty<StreamSubscription<PushNotificationModel>>(
+        DiagnosticsProperty<StreamSubscription<PushNotificationModel>?>(
             'pushNotificationSubscription', pushNotificationSubscription));
   }
 }

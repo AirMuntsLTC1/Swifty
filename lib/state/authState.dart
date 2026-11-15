@@ -1,453 +1,285 @@
-import 'dart:async';
 import 'dart:io';
 
-import 'package:firebase_database/firebase_database.dart' as db;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/shared_prefrence_helper.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
+import 'package:flutter_twitter_clone/resource/push_notification_service.dart';
+import 'package:flutter_twitter_clone/state/appState.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_auth_service.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/common/locator.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:path/path.dart' as path;
 
-import 'appState.dart';
+/// The signed-in Supabase user as the UI sees it.
+class SwiflyUser {
+  SwiflyUser({
+    required this.uid,
+    this.email,
+    this.displayName,
+    this.photoURL,
+    this.emailVerified = false,
+  });
 
+  final String uid;
+  final String? email;
+  final String? displayName;
+  final String? photoURL;
+  final bool emailVerified;
+}
+
+/// Login session, the signed-in user's profile, and profile updates.
+/// Auth is handled by the `email-code-auth` Edge Function through
+/// [SupabaseAuthService]; profile data comes from the `profiles` table.
 class AuthState extends AppState {
   AuthStatus authStatus = AuthStatus.NOT_DETERMINED;
   bool isSignInWithGoogle = false;
-  User? user;
-  late String userId;
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-  final FirebaseStorage _firebaseStorage = FirebaseStorage.instance;
-  db.Query? _profileQuery;
-  // List<UserModel> _profileUserModelList;
+  SwiflyUser? user;
+
+  String get userId => user?.uid ?? SupabaseRepository.instance.uid ?? '';
+
   UserModel? _userModel;
+  RealtimeChannel? _profileChannel;
 
   UserModel? get userModel => _userModel;
-
   UserModel? get profileUserModel => _userModel;
 
-  /// Logout from device
+  SupabaseRepository get _repo => SupabaseRepository.instance;
+
+  /// Logout from device.
   void logoutCallback() async {
     authStatus = AuthStatus.NOT_LOGGED_IN;
-    userId = '';
     _userModel = null;
     user = null;
-    _profileQuery!.onValue.drain();
-    _profileQuery = null;
-    if (isSignInWithGoogle) {
-      _googleSignIn.signOut();
-      Utility.logEvent('google_logout', parameter: {});
-      isSignInWithGoogle = false;
-    }
-    _firebaseAuth.signOut();
+    isSignInWithGoogle = false;
+    await _removeProfileChannel();
     notifyListeners();
+    try {
+      await SupabaseAuthService.instance.signOut();
+    } catch (error) {
+      cprint(error, errorIn: 'logoutCallback');
+    }
     await getIt<SharedPreferenceHelper>().clearPreferenceValues();
   }
 
-  /// Alter select auth method, login and sign up page
+  /// Alter select auth method, login and sign up page.
   void openSignUpPage() {
     authStatus = AuthStatus.NOT_LOGGED_IN;
-    userId = '';
     notifyListeners();
   }
 
+  /// Subscribe to changes of the signed-in user's profile row.
   void databaseInit() {
-    try {
-      if (_profileQuery == null) {
-        _profileQuery = kDatabase.child("profile").child(user!.uid);
-        _profileQuery!.onValue.listen(_onProfileChanged);
-        _profileQuery!.onChildChanged.listen(_onProfileUpdated);
-      }
-    } catch (error) {
-      cprint(error, errorIn: 'databaseInit');
-    }
+    final me = _repo.uid;
+    if (me == null || _profileChannel != null) return;
+    _profileChannel = _repo.db.channel('profile-me-$me')
+      ..onPostgresChanges(
+        event: PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'profiles',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'id',
+          value: me,
+        ),
+        callback: (_) {
+          getProfileUser();
+        },
+      )
+      ..subscribe();
   }
 
-  /// Verify user's credentials for login
+  /// Email + password sign in.
   Future<String?> signIn(String email, String password,
       {required BuildContext context}) async {
     try {
       isBusy = true;
-      var result = await _firebaseAuth.signInWithEmailAndPassword(
-          email: email, password: password);
-      user = result.user;
-      userId = user!.uid;
-      return user!.uid;
-    } on FirebaseException catch (error) {
-      if (error.code == 'firebase_auth/user-not-found') {
-        Utility.customSnackBar(context, 'User not found');
-      } else {
-        Utility.customSnackBar(
-          context,
-          error.message ?? 'Something went wrong',
-        );
-      }
-      cprint(error, errorIn: 'signIn');
+      await SupabaseAuthService.instance.login(email: email, password: password);
+      final current = await getCurrentUser();
+      return current?.uid;
+    } on SwiflyAuthError catch (error) {
+      Utility.customSnackBar(context, error.message);
       return null;
     } catch (error) {
       Utility.customSnackBar(context, error.toString());
-      cprint(error, errorIn: 'signIn');
-
       return null;
     } finally {
       isBusy = false;
     }
   }
 
-  /// Create user from `google login`
-  /// If user is new then it create a new user
-  /// If user is old then it just `authenticate` user and return firebase user data
-  Future<User?> handleGoogleSignIn() async {
-    try {
-      /// Record log in firebase kAnalytics about Google login
-      kAnalytics.logLogin(loginMethod: 'google_login');
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        throw Exception('Google login cancelled by user');
-      }
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      user = (await _firebaseAuth.signInWithCredential(credential)).user;
-      authStatus = AuthStatus.LOGGED_IN;
-      userId = user!.uid;
-      isSignInWithGoogle = true;
-      createUserFromGoogleSignIn(user!);
-      notifyListeners();
-      return user;
-    } on PlatformException catch (error) {
-      user = null;
-      authStatus = AuthStatus.NOT_LOGGED_IN;
-      cprint(error, errorIn: 'handleGoogleSignIn');
-      return null;
-    } on Exception catch (error) {
-      user = null;
-      authStatus = AuthStatus.NOT_LOGGED_IN;
-      cprint(error, errorIn: 'handleGoogleSignIn');
-      return null;
-    } catch (error) {
-      user = null;
-      authStatus = AuthStatus.NOT_LOGGED_IN;
-      cprint(error, errorIn: 'handleGoogleSignIn');
-      return null;
-    }
+  /// Google sign-in is not connected to Supabase in this build.
+  Future<SwiflyUser?> handleGoogleSignIn() async {
+    cprint('Google sign-in is not connected. Use email sign-in.',
+        errorIn: 'handleGoogleSignIn');
+    return null;
   }
 
-  /// Create user profile from google login
-  void createUserFromGoogleSignIn(User user) {
-    var diff = DateTime.now().difference(user.metadata.creationTime!);
-    // Check if user is new or old
-    // If user is new then add new user to firebase realtime kDatabase
-    if (diff < const Duration(seconds: 15)) {
-      UserModel model = UserModel(
-        bio: 'Edit profile to update bio',
-        dob: DateTime(1950, DateTime.now().month, DateTime.now().day + 3)
-            .toString(),
-        location: 'Somewhere in universe',
-        profilePic: user.photoURL!,
-        displayName: user.displayName!,
-        email: user.email!,
-        key: user.uid,
-        userId: user.uid,
-        contact: user.phoneNumber!,
-        isVerified: user.emailVerified,
-      );
-      createUser(model, newUser: true);
-    } else {
-      cprint('Last login at: ${user.metadata.lastSignInTime}');
-    }
-  }
-
-  /// Create new user's profile in db
+  /// Sign-up is done on the code-verified screen (create_account_page.dart).
   Future<String?> signUp(UserModel userModel,
       {required BuildContext context, required String password}) async {
-    try {
-      isBusy = true;
-      var result = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: userModel.email!,
-        password: password,
-      );
-      user = result.user;
-      authStatus = AuthStatus.LOGGED_IN;
-      kAnalytics.logSignUp(signUpMethod: 'register');
-      result.user!.updateDisplayName(
-        userModel.displayName,
-      );
-      result.user!.updatePhotoURL(userModel.profilePic);
+    Utility.customSnackBar(
+      context,
+      'Create your account from the sign-up screen.',
+    );
+    return null;
+  }
 
-      _userModel = userModel;
-      _userModel!.key = user!.uid;
-      _userModel!.userId = user!.uid;
-      createUser(_userModel!, newUser: true);
-      return user!.uid;
+  /// Save profile fields for the signed-in user.
+  Future<void> createUser(UserModel user, {bool newUser = false}) async {
+    try {
+      await _repo.updateProfile(
+        displayName: user.displayName,
+        bio: user.bio,
+      );
+      _userModel = user;
     } catch (error) {
+      cprint(error, errorIn: 'createUser');
+    } finally {
       isBusy = false;
-      cprint(error, errorIn: 'signUp');
-      Utility.customSnackBar(context, error.toString());
-      return null;
+      notifyListeners();
     }
   }
 
-  /// `Create` and `Update` user
-  /// IF `newUser` is true new user is created
-  /// Else existing user will update with new values
-  void createUser(UserModel user, {bool newUser = false}) {
-    if (newUser) {
-      // Create username by the combination of name and id
-      user.userName =
-          Utility.getUserName(id: user.userId!, name: user.displayName!);
-      kAnalytics.logEvent(name: 'create_newUser');
-
-      // Time at which user is created
-      user.createdAt = DateTime.now().toUtc().toString();
-    }
-
-    kDatabase.child('profile').child(user.userId!).set(user.toJson());
-    _userModel = user;
-    isBusy = false;
-  }
-
-  /// Fetch current user profile
-  Future<User?> getCurrentUser() async {
+  /// Load the signed-in user and their profile.
+  Future<SwiflyUser?> getCurrentUser() async {
     try {
       isBusy = true;
-      Utility.logEvent('get_currentUSer', parameter: {});
-      user = _firebaseAuth.currentUser;
-      if (user != null) {
-        await getProfileUser();
-        authStatus = AuthStatus.LOGGED_IN;
-        userId = user!.uid;
-      } else {
+      final auth = _repo.db.auth.currentUser;
+      if (auth == null) {
         authStatus = AuthStatus.NOT_LOGGED_IN;
+        user = null;
+        return null;
       }
-      isBusy = false;
+      user = SwiflyUser(
+        uid: auth.id,
+        email: auth.email,
+        displayName: (auth.userMetadata?['display_name'] ?? '').toString(),
+        emailVerified: auth.emailConfirmedAt != null,
+      );
+      await _repo.ensureOwnProfile();
+      await getProfileUser();
+      authStatus = AuthStatus.LOGGED_IN;
+      databaseInit();
       return user;
     } catch (error) {
-      isBusy = false;
-      cprint(error, errorIn: 'getCurrentUser');
       authStatus = AuthStatus.NOT_LOGGED_IN;
+      cprint(error, errorIn: 'getCurrentUser');
       return null;
+    } finally {
+      isBusy = false;
+      notifyListeners();
     }
   }
 
-  /// Reload user to get refresh user data
-  void reloadUser() async {
-    await user!.reload();
-    user = _firebaseAuth.currentUser;
-    if (user!.emailVerified) {
-      userModel!.isVerified = true;
-      // If user verified his email
-      // Update user in firebase realtime kDatabase
-      createUser(userModel!);
-      cprint('UserModel email verification complete');
-      Utility.logEvent('email_verification_complete',
-          parameter: {userModel!.userName!: user!.email!});
-    }
-  }
+  /// Email verification happens with the 6-digit code at sign-up.
+  void reloadUser() {}
 
-  /// Send email verification link to email2
   Future<void> sendEmailVerification(BuildContext context) async {
-    User user = _firebaseAuth.currentUser!;
-    user.sendEmailVerification().then((_) {
-      Utility.logEvent('email_verification_sent',
-          parameter: {userModel!.displayName!: user.email!});
-      Utility.customSnackBar(
-        context,
-        'An email verification link is send to your email.',
-      );
-    }).catchError((error) {
-      cprint(error.message, errorIn: 'sendEmailVerification');
-      Utility.logEvent('email_verification_block',
-          parameter: {userModel!.displayName!: user.email!});
-      Utility.customSnackBar(
-        context,
-        error.message,
-      );
-    });
+    Utility.customSnackBar(
+      context,
+      'Your email was verified with a code when you created your account.',
+    );
   }
 
-  /// Check if user's email is verified
-  Future<bool> emailVerified() async {
-    User user = _firebaseAuth.currentUser!;
-    return user.emailVerified;
-  }
+  /// Accounts are only created after the email code is verified.
+  Future<bool> emailVerified() async => user?.emailVerified ?? false;
 
-  /// Send password reset link to email
+  /// Send a 6-digit reset code. The reset screen completes the change.
   Future<void> forgetPassword(String email,
       {required BuildContext context}) async {
     try {
-      await _firebaseAuth.sendPasswordResetEmail(email: email).then((value) {
-        Utility.customSnackBar(context,
-            'A reset password link is sent yo your mail.You can reset your password from there');
-        Utility.logEvent('forgot+password', parameter: {});
-      }).catchError((error) {
-        cprint(error.message);
-      });
-    } catch (error) {
-      Utility.customSnackBar(context, error.toString());
-      return Future.value(false);
+      await SupabaseAuthService.instance
+          .sendCode(email: email, purpose: 'password_reset');
+      Utility.customSnackBar(
+          context, 'A 6-digit reset code was sent to your email.');
+    } on SwiflyAuthError catch (error) {
+      Utility.customSnackBar(context, error.message);
     }
   }
 
-  /// `Update user` profile
+  /// Update display name, bio and avatar for the signed-in user.
   Future<void> updateUserProfile(UserModel? userModel,
       {File? image, File? bannerImage}) async {
     try {
-      if (image == null && bannerImage == null) {
-        createUser(userModel!);
-      } else {
-        /// upload profile image if not null
-        if (image != null) {
-          /// get image storage path from server
-          userModel!.profilePic = await _uploadFileToStorage(image,
-              'user/profile/${userModel.userName}/${path.basename(image.path)}');
-          // print(fileURL);
-          var name = userModel.displayName ?? user!.displayName;
-          _firebaseAuth.currentUser!.updateDisplayName(name);
-          _firebaseAuth.currentUser!.updatePhotoURL(userModel.profilePic);
-          Utility.logEvent('user_profile_image');
-        }
+      final target = userModel ?? _userModel;
+      if (target == null) return;
 
-        /// upload banner image if not null
-        if (bannerImage != null) {
-          /// get banner storage path from server
-          userModel!.bannerImage = await _uploadFileToStorage(bannerImage,
-              'user/profile/${userModel.userName}/${path.basename(bannerImage.path)}');
-          Utility.logEvent('user_banner_image');
-        }
-
-        if (userModel != null) {
-          createUser(userModel);
-        } else {
-          createUser(_userModel!);
-        }
+      String? avatarUrl;
+      if (image != null) {
+        avatarUrl = await _repo.uploadFile(kAvatarBucket, image);
+        target.profilePic = avatarUrl;
+        Utility.logEvent('user_profile_image');
+      }
+      if (bannerImage != null) {
+        cprint('Banner images are not stored in the Supabase schema yet.');
       }
 
+      await _repo.updateProfile(
+        displayName: target.displayName,
+        bio: target.bio,
+        avatarUrl: avatarUrl,
+      );
+      await getProfileUser();
       Utility.logEvent('update_user');
     } catch (error) {
       cprint(error, errorIn: 'updateUserProfile');
     }
   }
 
-  Future<String> _uploadFileToStorage(File file, path) async {
-    var task = _firebaseStorage.ref().child(path);
-    var status = await task.putFile(file);
-    cprint(status.state.name);
+  /// Fetch a user's profile by id.
+  Future<UserModel?> getUserDetail(String userId) => _repo.fetchUser(userId);
 
-    /// get file storage path from server
-    return await task.getDownloadURL();
-  }
-
-  /// `Fetch` user `detail` whose userId is passed
-  Future<UserModel?> getUserDetail(String userId) async {
-    UserModel user;
-    var event = await kDatabase.child('profile').child(userId).once();
-
-    final map = event.snapshot.value as Map?;
-    if (map != null) {
-      user = UserModel.fromJson(map);
-      user.key = event.snapshot.key!;
-      return user;
-    } else {
-      return null;
-    }
-  }
-
-  /// Fetch user profile
-  /// If `userProfileId` is null then logged in user's profile will fetched
-  FutureOr<void> getProfileUser({String? userProfileId}) {
+  /// Fetch the signed-in user's profile when [userProfileId] is null.
+  Future<void> getProfileUser({String? userProfileId}) async {
     try {
-      userProfileId = userProfileId ?? user!.uid;
-      kDatabase
-          .child("profile")
-          .child(userProfileId)
-          .once()
-          .then((DatabaseEvent event) async {
-        final snapshot = event.snapshot;
-        if (snapshot.value != null) {
-          var map = snapshot.value as Map<dynamic, dynamic>?;
-          if (map != null) {
-            if (userProfileId == user!.uid) {
-              _userModel = UserModel.fromJson(map);
-              _userModel!.isVerified = user!.emailVerified;
-              if (!user!.emailVerified) {
-                // Check if logged in user verified his email address or not
-                // reloadUser();
-              }
-              if (_userModel!.fcmToken == null) {
-                updateFCMToken();
-              }
-
-              getIt<SharedPreferenceHelper>().saveUserProfile(_userModel!);
-            }
-
-            Utility.logEvent('get_profile', parameter: {});
-          }
-        }
-        isBusy = false;
-      });
-    } catch (error) {
-      isBusy = false;
-      cprint(error, errorIn: 'getProfileUser');
-    }
-  }
-
-  /// if firebase token not available in profile
-  /// Then get token from firebase and save it to profile
-  /// When someone sends you a message FCM token is used
-  void updateFCMToken() {
-    if (_userModel == null) {
-      return;
-    }
-    getProfileUser();
-    _firebaseMessaging.getToken().then((String? token) {
-      assert(token != null);
-      _userModel!.fcmToken = token;
-      createUser(_userModel!);
-    });
-  }
-
-  /// Trigger when logged-in user's profile change or updated
-  /// Firebase event callback for profile update
-  void _onProfileChanged(DatabaseEvent event) {
-    final val = event.snapshot.value;
-    if (val is Map) {
-      final updatedUser = UserModel.fromJson(val);
-      _userModel = updatedUser;
-      cprint('UserModel Updated');
-      getIt<SharedPreferenceHelper>().saveUserProfile(_userModel!);
-      notifyListeners();
-    }
-  }
-
-  void _onProfileUpdated(DatabaseEvent event) {
-    final val = event.snapshot.value;
-    if (val is List &&
-        ['following', 'followers'].contains(event.snapshot.key)) {
-      final list = val.cast<String>().map((e) => e).toList();
-      if (event.previousChildKey == 'following') {
-        _userModel = _userModel!.copyWith(
-          followingList: val.cast<String>().map((e) => e).toList(),
-          following: list.length,
-        );
-      } else if (event.previousChildKey == 'followers') {
-        _userModel = _userModel!.copyWith(
-          followersList: list,
-          followers: list.length,
-        );
+      final me = _repo.uid;
+      if (me == null) return;
+      final id = userProfileId ?? me;
+      final model = await _repo.fetchUser(id);
+      if (model != null && id == me) {
+        _userModel = model;
+        _syncUser();
+        getIt<SharedPreferenceHelper>().saveUserProfile(_userModel!);
+        notifyListeners();
       }
-      getIt<SharedPreferenceHelper>().saveUserProfile(_userModel!);
-      cprint('UserModel Updated');
-      notifyListeners();
+    } catch (error) {
+      cprint(error, errorIn: 'getProfileUser');
+    } finally {
+      isBusy = false;
     }
+  }
+
+  /// Register this device's push token so the server can send notifications.
+  void updateFCMToken() {
+    if (_userModel == null) return;
+    PushNotificationService.registerCurrentDeviceToken();
+  }
+
+  void _syncUser() {
+    final auth = _repo.db.auth.currentUser;
+    if (auth == null) return;
+    user = SwiflyUser(
+      uid: auth.id,
+      email: auth.email,
+      displayName: _userModel?.displayName,
+      photoURL: _userModel?.profilePic,
+      emailVerified: auth.emailConfirmedAt != null,
+    );
+  }
+
+  Future<void> _removeProfileChannel() async {
+    if (_profileChannel != null) {
+      await _repo.db.removeChannel(_profileChannel!);
+      _profileChannel = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _removeProfileChannel();
+    super.dispose();
   }
 }

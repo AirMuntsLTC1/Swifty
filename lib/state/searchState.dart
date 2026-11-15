@@ -1,6 +1,7 @@
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'appState.dart';
 
 class SearchState extends AppState {
@@ -17,37 +18,19 @@ class SearchState extends AppState {
     }
   }
 
-  /// get [UserModel list] from firebase realtime Database
-  void getDataFromDatabase() {
+  /// Load users for search and the chat user picker.
+  void getDataFromDatabase() async {
+    isBusy = true;
     try {
-      isBusy = true;
-      kDatabase.child('profile').once().then(
-        (DatabaseEvent event) {
-          final snapshot = event.snapshot;
-          _userlist = <UserModel>[];
-          _userFilterList = <UserModel>[];
-          if (snapshot.value != null) {
-            var map = snapshot.value as Map?;
-            if (map != null) {
-              map.forEach((key, value) {
-                var model = UserModel.fromJson(value);
-                model.key = key;
-                _userlist!.add(model);
-                _userFilterList!.add(model);
-              });
-              _userFilterList!
-                  .sort((x, y) => y.followers!.compareTo(x.followers!));
-              notifyListeners();
-            }
-          } else {
-            _userlist = null;
-          }
-          isBusy = false;
-        },
-      );
+      final users = await SupabaseRepository.instance.fetchAllUsers(limit: 100);
+      _userlist = users;
+      _userFilterList = List.from(users);
+      _userFilterList!.sort((x, y) => (y.followers ?? 0).compareTo(x.followers ?? 0));
+      notifyListeners();
     } catch (error) {
-      isBusy = false;
       cprint(error, errorIn: 'getDataFromDatabase');
+    } finally {
+      isBusy = false;
     }
   }
 

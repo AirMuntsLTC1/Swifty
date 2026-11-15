@@ -1,7 +1,9 @@
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
 import 'package:flutter_twitter_clone/state/appState.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 
+/// "Who to follow" suggestions shown after sign-up.
 class SuggestionsState extends AppState {
   List<UserModel>? _userlist;
 
@@ -25,44 +27,29 @@ class SuggestionsState extends AppState {
   List<UserModel>? get userlist => _userlist;
   void setUserlist(List<UserModel>? list) {
     if (list != null && _userlist == null) {
-      list.sort((a, b) {
-        if (a.followersList != null && b.followersList != null) {
-          return b.followersList!.length.compareTo(a.followersList!.length);
-        } else if (a.followersList != null) {
-          return 0;
-        }
-        return 1;
-      });
-
+      list.sort((a, b) => (b.followersList?.length ?? 0)
+          .compareTo(a.followersList?.length ?? 0));
       _userlist = list.take(20).toList();
       _userlist!.removeWhere((element) => isFollowing(element));
       _selectedUsers = List.from(_userlist!);
     }
   }
 
-  /// Check if user followerList contain your or not
-  /// If your id exist in follower list it mean you are following him
+  /// True if the signed-in user already follows [user].
   bool isFollowing(UserModel user) {
-    if (user.followersList != null &&
-        user.followersList!.any((x) => x == currentUser!.userId)) {
-      return true;
-    } else {
-      return false;
-    }
+    return user.followersList?.contains(currentUser?.userId) ?? false;
   }
 
   List<UserModel> _selectedUsers = [];
   int get selectedUsersCount => _selectedUsers.length;
 
-  bool isSelected(UserModel user) {
-    return _selectedUsers.contains(user);
-  }
+  bool isSelected(UserModel user) => _selectedUsers.contains(user);
 
   void toggleAllSelections() {
-    if (_selectedUsers.length == _userlist!.length) {
+    if (_selectedUsers.length == (_userlist?.length ?? 0)) {
       _selectedUsers = [];
     } else {
-      _selectedUsers = List.from(_userlist!);
+      _selectedUsers = List.from(_userlist ?? const []);
     }
     notifyListeners();
   }
@@ -73,50 +60,46 @@ class SuggestionsState extends AppState {
     } else {
       _selectedUsers.add(user);
     }
-
     notifyListeners();
   }
 
-  /// get [UserModel list] from firebase realtime Database
-  void getDataFromDatabase() {
-    try {} catch (error) {
-      isBusy = false;
+  /// Load users to suggest.
+  Future<void> getDataFromDatabase() async {
+    try {
+      final users = await SupabaseRepository.instance.fetchAllUsers();
+      setUserlist(users);
+      notifyListeners();
+    } catch (error) {
       cprint(error, errorIn: 'getDataFromDatabase');
     }
   }
 
+  /// Follow every selected user.
   Future<void> followUsers() async {
     try {
-      if (_selectedUsers.length > 0) {
-        /// Add current user id to the following list of all selected users
-        for (final user in _selectedUsers) {
-          user.followersList ??= [];
-          user.followersList!.add(currentUser!.userId!);
-          user.followers = user.followersList!.length;
-          await kDatabase
-              .child('profile')
-              .child(user.userId!)
-              .child('followerList')
-              .set(user.followersList);
-
-          cprint('user added to following list');
+      if (_selectedUsers.isEmpty) return;
+      final repo = SupabaseRepository.instance;
+      final me = currentUser;
+      for (final user in _selectedUsers) {
+        if (user.userId == null) continue;
+        await repo.setFollow(user.userId!, follow: true);
+        user.followersList ??= [];
+        if (me?.userId != null && !user.followersList!.contains(me!.userId)) {
+          user.followersList!.add(me.userId!);
         }
-
-        /// Add all selected users to current user following list
-        currentUser!.followingList ??= [];
-        currentUser!.followingList!
-            .addAll(_selectedUsers.map((e) => e.userId!));
-        currentUser!.following = currentUser!.followingList!.length;
-        await kDatabase
-            .child('profile')
-            .child(currentUser!.userId!)
-            .child('followingList')
-            .set(currentUser!.followingList);
-
-        displaySuggestions = false;
+        user.followers = user.followersList!.length;
       }
+      if (me != null) {
+        me.followingList ??= [];
+        for (final user in _selectedUsers) {
+          if (user.userId != null && !me.followingList!.contains(user.userId)) {
+            me.followingList!.add(user.userId!);
+          }
+        }
+        me.following = me.followingList!.length;
+      }
+      displaySuggestions = false;
     } catch (error) {
-      isBusy = false;
       cprint(error, errorIn: 'followUsers');
     }
   }

@@ -1,22 +1,22 @@
 import 'dart:async';
 
-import 'package:flutter_twitter_clone/helper/shared_prefrence_helper.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/bookmarkModel.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
-import 'package:flutter_twitter_clone/ui/page/common/locator.dart';
-import 'appState.dart';
+import 'package:flutter_twitter_clone/state/appState.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 
+/// Bookmarked posts. Stored in the `post_saves` table.
 class BookmarkState extends AppState {
   BookmarkState() {
     getDataFromDatabase();
   }
+
   List<FeedModel>? _tweetList;
   List<BookmarkModel>? _bookmarkList;
 
-  addBookmarkTweetToList(BookmarkModel model) {
+  void addBookmarkTweetToList(BookmarkModel model) {
     _bookmarkList ??= <BookmarkModel>[];
-
     if (!_bookmarkList!.any((element) => element.key == model.key)) {
       _bookmarkList!.add(model);
     }
@@ -24,64 +24,31 @@ class BookmarkState extends AppState {
 
   List<FeedModel>? get tweetList => _tweetList;
 
-  /// get [Notification list] from firebase realtime database
+  /// Load the signed-in user's saved posts.
   void getDataFromDatabase() async {
-    String userId = await getIt<SharedPreferenceHelper>()
-        .getUserProfile()
-        .then((value) => value!.userId!);
+    if (_tweetList != null) return;
+    isBusy = true;
     try {
-      if (_tweetList != null) {
-        return;
-      }
-      isBusy = true;
-      kDatabase
-          .child('bookmark')
-          .child(userId)
-          .once()
-          .then((DatabaseEvent event) async {
-        final snapshot = event.snapshot;
-        if (snapshot.value != null) {
-          var map = snapshot.value as Map<dynamic, dynamic>?;
-          if (map != null) {
-            map.forEach((bookmarkKey, value) {
-              var map = value as Map<dynamic, dynamic>;
-              var model = BookmarkModel.fromJson(map);
-              model.key = bookmarkKey;
-              addBookmarkTweetToList(model);
-            });
-          }
-
-          if (_bookmarkList != null) {
-            for (var bookmark in _bookmarkList!) {
-              var tweet = await getTweetDetail(bookmark.tweetId);
-              if (tweet != null) {
-                _tweetList ??= <FeedModel>[];
-                _tweetList!.add(tweet);
-              }
-            }
-          }
-        }
-        isBusy = false;
-      });
+      final ids = await SupabaseRepository.instance.fetchSavedPostIds();
+      _bookmarkList = ids
+          .map((id) => BookmarkModel(
+                key: id,
+                tweetId: id,
+                createdAt: DateTime.now().toUtc().toIso8601String(),
+              ))
+          .toList();
+      final posts = await SupabaseRepository.instance.fetchPosts(postIds: ids);
+      _tweetList = posts;
     } catch (error) {
-      isBusy = false;
       cprint(error, errorIn: 'getDataFromDatabase');
+    } finally {
+      isBusy = false;
+      notifyListeners();
     }
   }
 
-  /// get `Tweet` present in notification
-  Future<FeedModel?> getTweetDetail(String tweetId) async {
-    FeedModel _tweetDetail;
-    final event = await kDatabase.child('tweet').child(tweetId).once();
-
-    final snapshot = event.snapshot;
-    if (snapshot.value != null) {
-      var map = snapshot.value as Map<dynamic, dynamic>;
-      _tweetDetail = FeedModel.fromJson(map);
-      _tweetDetail.key = snapshot.key!;
-      return _tweetDetail;
-    } else {
-      return null;
-    }
+  /// Get a single post that is in the bookmarks.
+  Future<FeedModel?> getTweetDetail(String tweetId) {
+    return SupabaseRepository.instance.fetchPost(tweetId);
   }
 }

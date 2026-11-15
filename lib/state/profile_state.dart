@@ -1,35 +1,36 @@
 import 'dart:async';
 
-import 'package:firebase_database/firebase_database.dart' as dabase;
 import 'package:flutter/foundation.dart';
-import 'package:flutter_twitter_clone/helper/enum.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 
+/// Profile page state: the signed-in user and the profile being viewed.
 class ProfileState extends ChangeNotifier {
   ProfileState(this.profileId) {
+    userId = SupabaseRepository.instance.uid ?? '';
     databaseInit();
-    userId = FirebaseAuth.instance.currentUser!.uid;
     _getloggedInUserProfile(userId);
     _getProfileUser(profileId);
   }
 
-  /// This is the id of user who is logegd into the app.
+  /// Id of the logged-in user.
   late String userId;
 
-  /// Profile data of logged in user.
-  late UserModel _userModel;
+  /// Profile data of the logged-in user.
+  UserModel _userModel = UserModel(followersList: [], followingList: []);
   UserModel get userModel => _userModel;
 
-  dabase.Query? _profileQuery;
-  late StreamSubscription<DatabaseEvent> profileSubscription;
-
-  /// This is the id of user whose profile is open.
+  /// Id of the profile being viewed.
   final String profileId;
 
-  /// Profile data of user whose profile is open.
-  late UserModel _profileUserModel;
+  /// Profile data of the user whose profile is open.
+  UserModel _profileUserModel = UserModel(followersList: [], followingList: []);
   UserModel get profileUserModel => _profileUserModel;
+
+  RealtimeChannel? _channel;
 
   bool _isBusy = true;
   bool get isbusy => _isBusy;
@@ -38,143 +39,94 @@ class ProfileState extends ChangeNotifier {
     notifyListeners();
   }
 
-  databaseInit() {
-    try {
-      if (_profileQuery == null) {
-        _profileQuery = kDatabase.child("profile").child(profileId);
-        profileSubscription = _profileQuery!.onValue.listen(_onProfileChanged);
-      }
-    } catch (error) {
-      cprint(error, errorIn: 'databaseInit');
-    }
+  SupabaseRepository get _repo => SupabaseRepository.instance;
+
+  /// Refresh counts when the follow graph changes.
+  void databaseInit() {
+    if (_channel != null) return;
+    _channel = _repo.db.channel('profile-view-$profileId')
+      ..onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'follows',
+        callback: (_) {
+          _refreshProfiles();
+        },
+      )
+      ..subscribe();
   }
 
   bool get isMyProfile => profileId == userId;
 
-  /// Fetch profile of logged in  user
-  void _getloggedInUserProfile(String userId) async {
-    kDatabase.child("profile").child(userId).once().then((DatabaseEvent event) {
-      final snapshot = event.snapshot;
-      if (snapshot.value != null) {
-        var map = snapshot.value as Map<dynamic, dynamic>?;
-        if (map != null) {
-          _userModel = UserModel.fromJson(map);
-        }
-      }
-    });
-  }
-
-  /// Fetch profile data of user whoose profile is opened
-  void _getProfileUser(String? userProfileId) {
-    assert(userProfileId != null);
-    try {
-      loading = true;
-      kDatabase
-          .child("profile")
-          .child(userProfileId!)
-          .once()
-          .then((DatabaseEvent event) {
-        final snapshot = event.snapshot;
-        if (snapshot.value != null) {
-          var map = snapshot.value as Map;
-          // ignore: unnecessary_null_comparison
-          if (map != null) {
-            _profileUserModel = UserModel.fromJson(map);
-            Utility.logEvent('get_profile', parameter: {});
-          }
-        }
-        loading = false;
-      });
-    } catch (error) {
-      loading = false;
-      cprint(error, errorIn: 'getProfileUser');
+  Future<void> _getloggedInUserProfile(String userId) async {
+    final model = await _repo.fetchUser(userId);
+    if (model != null) {
+      _userModel = model;
+      notifyListeners();
     }
   }
 
-  /// Follow / Unfollow user
-  ///
-  /// If `removeFollower` is true then remove user from follower list
-  ///
-  /// If `removeFollower` is false then add user to follower list
-  followUser({bool removeFollower = false}) {
-    /// `userModel` is user who is logged-in app.
-    /// `profileUserModel` is user whoose profile is open in app.
+  Future<void> _getProfileUser(String? userProfileId) async {
+    if (userProfileId == null) return;
     try {
-      if (removeFollower) {
-        /// If logged-in user `alredy follow `profile user then
-        /// 1.Remove logged-in user from profile user's `follower` list
-        /// 2.Remove profile user from logged-in user's `following` list
-        profileUserModel.followersList!.remove(userModel.userId);
-
-        /// Remove profile user from logged-in user's following list
-        userModel.followingList!.remove(profileUserModel.userId);
-        cprint('user removed from following list', event: 'remove_follow');
-      } else {
-        /// if logged in user is `not following` profile user then
-        /// 1.Add logged in user to profile user's `follower` list
-        /// 2. Add profile user to logged in user's `following` list
-        profileUserModel.followersList ??= [];
-        profileUserModel.followersList!.add(userModel.userId!);
-        // Adding profile user to logged-in user's following list
-        userModel.followingList ??= [];
-        addFollowNotification();
-        userModel.followingList!.add(profileUserModel.userId!);
+      loading = true;
+      final model = await _repo.fetchUser(userProfileId);
+      if (model != null) {
+        _profileUserModel = model;
+        Utility.logEvent('get_profile', parameter: {});
       }
-      // update profile user's user follower count
-      profileUserModel.followers = profileUserModel.followersList!.length;
-      // update logged-in user's following count
-      userModel.following = userModel.followingList!.length;
-      kDatabase
-          .child('profile')
-          .child(profileUserModel.userId!)
-          .child('followerList')
-          .set(profileUserModel.followersList);
-      kDatabase
-          .child('profile')
-          .child(userModel.userId!)
-          .child('followingList')
-          .set(userModel.followingList);
-      cprint('user added to following list', event: 'add_follow');
+    } catch (error) {
+      cprint(error, errorIn: 'getProfileUser');
+    } finally {
+      loading = false;
+    }
+  }
 
+  Future<void> _refreshProfiles() async {
+    await _getloggedInUserProfile(userId);
+    final model = await _repo.fetchUser(profileId);
+    if (model != null) {
+      _profileUserModel = model;
+      notifyListeners();
+    }
+  }
+
+  /// Follow / unfollow the profile user. The database trigger
+  /// `swifly_on_follow` creates the follow notification.
+  Future<void> followUser({bool removeFollower = false}) async {
+    try {
+      final me = userModel.userId ?? userId;
+      final target = profileUserModel.userId ?? profileId;
+      final unfollow = removeFollower;
+
+      await _repo.setFollow(target, follow: !unfollow);
+
+      final targetFollowers = _profileUserModel.followersList ??= [];
+      final myFollowing = _userModel.followingList ??= [];
+      if (unfollow) {
+        targetFollowers.remove(me);
+        myFollowing.remove(target);
+      } else {
+        if (!targetFollowers.contains(me)) targetFollowers.add(me);
+        if (!myFollowing.contains(target)) myFollowing.add(target);
+      }
+      _profileUserModel.followers = targetFollowers.length;
+      _userModel.following = myFollowing.length;
       notifyListeners();
     } catch (error) {
       cprint(error, errorIn: 'followUser');
     }
   }
 
-  void addFollowNotification() {
-    // Sends notification to user who created tweet
-    // UserModel owner can see notification on notification page
-    kDatabase.child('notification').child(profileId).child(userId).set({
-      'type': NotificationType.Follow.toString(),
-      'createdAt': DateTime.now().toUtc().toString(),
-      'data': UserModel(
-              displayName: userModel.displayName,
-              profilePic: userModel.profilePic,
-              isVerified: userModel.isVerified,
-              userId: userModel.userId,
-              bio: userModel.bio == "Edit profile to update bio"
-                  ? ""
-                  : userModel.bio,
-              userName: userModel.userName)
-          .toJson()
-    });
-  }
-
-  /// Trigger when logged-in user's profile change or updated
-  /// Firebase event callback for profile update
-  void _onProfileChanged(DatabaseEvent event) {
-    final updatedUser = UserModel.fromJson(event.snapshot.value as Map);
-    if (updatedUser.userId == profileId) {
-      _profileUserModel = updatedUser;
-    }
-    notifyListeners();
-  }
+  /// Kept for compatibility. The follow notification is created by a trigger.
+  void addFollowNotification() {}
 
   @override
   void dispose() {
-    _profileQuery!.onValue.drain();
-    profileSubscription.cancel();
+    if (_channel != null) {
+      _repo.db.removeChannel(_channel!);
+      _channel = null;
+    }
     super.dispose();
   }
 }

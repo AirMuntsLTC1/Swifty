@@ -59,6 +59,28 @@ If you see a `flutter build` usage message, an old `.github/workflows/dart.yml` 
 - **Forgot password** (email → code → new password) → `send_code`, `check_code`, `reset_password`
 - The app shows the sign-in screen until a Supabase session exists, then opens the home page.
 
-## Still on Firebase (not migrated yet)
+## Data layer: Supabase only
 
-The rest of the app (feed, posts, chats, notifications, profiles, search) still reads from Firestore and Firebase Auth, which were not converted in this pass. After signing in with Supabase, those screens will not have data until they are moved to Supabase tables. This is the next step.
+Firebase is no longer used for data, auth, storage, analytics, remote config or dynamic links.
+Firebase Cloud Messaging stays only to get the device push token. The `push-notify` Edge Function sends the pushes.
+
+| Feature | Supabase |
+|---|---|
+| Profiles, follows | `profiles`, `follows` |
+| Feed, media, likes, saves, replies | `posts`, `post_media`, `post_likes`, `post_saves`, `comments` |
+| Notifications (realtime) | `notifications` |
+| Direct messages (realtime) | `messages` |
+| Avatar and post images | Storage buckets `avatars`, `post-media` |
+| Push tokens | `user_devices` via `swifly_register_push_token` |
+
+Data access is in `lib/supabase/supabase_repository.dart`.
+
+Apply the migration `supabase/migrations/20261116000000_swifly_flutter_bridge.sql` in the SQL Editor after the previous one.
+
+Known limits in this version:
+- Retweets are saved as new posts (the posts table has no parent column).
+- Banner images are not stored (no column for them).
+- Google sign-in is not connected. Use email sign-in.
+- Share links use `kShareBaseUrl` in `lib/helper/utility.dart`. Change it to your domain.
+- Push taps open the notifications or chat tab. The current push payload has no post or sender id.
+

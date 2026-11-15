@@ -3,18 +3,19 @@ import 'package:flutter_twitter_clone/helper/shared_prefrence_helper.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
 import 'package:flutter_twitter_clone/state/appState.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/common/locator.dart';
 
 enum StateType { following, follower }
 
+/// Followers / following list of a profile.
 class FollowListState extends AppState {
   FollowListState(StateType type) {
     isBusy = true;
     getIt<SharedPreferenceHelper>().getUserProfile().then((user) {
-      if (user != null) {
-        _currentUser = user;
-        isBusy = false;
-      }
+      _currentUser = user;
+      isBusy = false;
+      notifyListeners();
     });
     stateType = type;
   }
@@ -22,93 +23,38 @@ class FollowListState extends AppState {
   UserModel? _currentUser;
   late StateType stateType;
 
-  /// Follow / Unfollow user
+  /// Follow / unfollow [secondUser] as the signed-in user.
   Future<void> followUser(UserModel secondUser) async {
-    bool isfollwing = isFollowing(secondUser);
-
-    /// `_currentUser` is user who is logged-in  app.
-    /// `secondUser` is user whoose profile is open in app.
+    final me = _currentUser;
+    if (me == null || me.userId == null || secondUser.userId == null) return;
+    final alreadyFollowing = isFollowing(secondUser);
     try {
-      if (isfollwing) {
-        /// If current user alredy followed secondUser user then
-        /// 1.Remove current user from second user's `follower` list
-        /// 2.Remove second user from current user's `following` list
-        secondUser.followersList!.remove(_currentUser!.userId);
+      await SupabaseRepository.instance
+          .setFollow(secondUser.userId!, follow: !alreadyFollowing);
 
-        /// Remove second user from current user user's following list
-        _currentUser!.followingList!.remove(secondUser.userId);
-        cprint('user removed from following list');
+      final followers = secondUser.followersList ??= [];
+      final following = me.followingList ??= [];
+      if (alreadyFollowing) {
+        followers.remove(me.userId);
+        following.remove(secondUser.userId);
       } else {
-        /// if current user is not following second user then
-        /// 1.Add current user to second user's `follower` list
-        /// 2. Add second user to current user's `following` list
-        secondUser.followersList ??= [];
-        secondUser.followersList!.add(_currentUser!.userId!);
-        // Adding second user to current user's following list
-        _currentUser!.followingList ??= [];
-        addFollowNotification(secondUser.userId!);
-        _currentUser!.followingList!.add(secondUser.userId!);
-
-        cprint('user added from following list');
+        if (!followers.contains(me.userId)) followers.add(me.userId!);
+        if (!following.contains(secondUser.userId)) {
+          following.add(secondUser.userId!);
+        }
       }
-
-      // update second user's follower count
-      secondUser.followers = secondUser.followersList!.length;
-      // update current user's following count
-      _currentUser!.following = _currentUser!.followingList!.length;
-
-      /// Update other user profile
-      kDatabase
-          .child('profile')
-          .child(secondUser.userId!)
-          .child('followerList')
-          .set(secondUser.followersList);
-
-      /// update current user profile
-      kDatabase
-          .child('profile')
-          .child(_currentUser!.userId!)
-          .child('followingList')
-          .set(_currentUser!.followingList);
-      cprint('Operation Success');
-      // await getIt<SharedPreferenceHelper>().saveUserProfile(_currentUser!);
-
+      secondUser.followers = followers.length;
+      me.following = following.length;
       notifyListeners();
     } catch (error) {
       cprint(error, errorIn: 'followUser');
     }
   }
 
-  /// Check if user followerlist contain your or not
-  /// If your id exist in follower list it mean you are following him
-  bool isFollowing(UserModel user) {
-    if (_currentUser!.followingList != null &&
-        _currentUser!.followingList!.any((x) => x == user.userId)) {
-      return true;
-    }
-    return false;
-  }
+  /// True if the signed-in user follows [user].
+  bool isFollowing(UserModel user) =>
+      _currentUser?.followingList?.contains(user.userId) ?? false;
 
-  void addFollowNotification(String profileId) {
-    // Sends notification to user who created tweet
-    // UserModel owner can see notification on notification page
-    kDatabase
-        .child('notification')
-        .child(profileId)
-        .child(_currentUser!.userId!)
-        .set({
-      'type': NotificationType.Follow.toString(),
-      'createdAt': DateTime.now().toUtc().toString(),
-      'data': UserModel(
-              displayName: _currentUser!.displayName,
-              profilePic: _currentUser!.profilePic,
-              isVerified: _currentUser!.isVerified,
-              userId: _currentUser!.userId,
-              bio: _currentUser!.bio == "Edit profile to update bio"
-                  ? ""
-                  : _currentUser!.bio,
-              userName: _currentUser!.userName)
-          .toJson()
-    });
-  }
+  /// Kept for compatibility. The follow trigger creates the notification.
+  void addFollowNotification(String profileId) {}
 }

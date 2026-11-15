@@ -55,6 +55,11 @@ class _SplashPageState extends State<SplashPage> {
     final buildNo = packageInfo.buildNumber;
     final config = await _getAppVersionFromFirebaseConfig();
 
+    if (config == null) {
+      // No version config available: allow the app to open.
+      return true;
+    }
+
     if (config != null &&
         config['name'] == currentAppVersion &&
         config['versions'].contains(int.tryParse(buildNo))) {
@@ -90,20 +95,7 @@ class _SplashPageState extends State<SplashPage> {
   ///  } ```
   /// After adding app version key click on Publish Change button
   /// For package detail check:-  https://pub.dev/packages/firebase_remote_config#-readme-tab-
-  Future<Map?> _getAppVersionFromFirebaseConfig() async {
-    final FirebaseRemoteConfig remoteConfig = FirebaseRemoteConfig.instance;
-    await remoteConfig.fetchAndActivate();
-    // await remoteConfig.activateFetched();
-    var data = remoteConfig.getString('supportedBuild');
-    if (data.isNotEmpty) {
-      return jsonDecode(data) as Map;
-    } else {
-      cprint(
-          "Please add your app's current version into Remote config in firebase",
-          errorIn: "_getAppVersionFromFirebaseConfig");
-      return null;
-    }
-  }
+  Future<Map?> _getAppVersionFromFirebaseConfig() async => null;
 
   Widget _body() {
     var height = 150.0;
