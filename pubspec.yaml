@@ -44,6 +44,8 @@ dependencies:
   rxdart: ^0.28.0
   translator: ^1.0.0
   supabase_flutter: ^2.8.0
+  readmore: any
+  flutter_svg: any
   # link_preview_generator: ^1.2.0
 
 # win32 4.x needs a newer Dart than Flutter 3.24.3 ships. Pin the 5.x line,
@@ -129,5 +131,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
-  readmore: any
-  flutter_svg: any
