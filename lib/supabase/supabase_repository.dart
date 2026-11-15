@@ -89,7 +89,7 @@ class SupabaseRepository {
   // ---------------------------------------------------------------------------
 
   Future<UserModel?> fetchUser(String userId) async {
-    final res = await Future.wait([
+    final res = await Future.wait<dynamic>([
       db.from('profiles').select().eq('id', userId).maybeSingle(),
       db.from('follows').select('follower').eq('followee', userId),
       db.from('follows').select('followee').eq('follower', userId),
@@ -115,7 +115,7 @@ class SupabaseRepository {
     if (rows.isEmpty) return [];
     final ids = rows.map((r) => r['id'].toString()).toList();
 
-    final follows = await Future.wait([
+    final follows = await Future.wait<dynamic>([
       db.from('follows').select('follower, followee').inFilter('followee', ids),
       db.from('follows').select('follower, followee').inFilter('follower', ids),
     ]);
@@ -262,7 +262,7 @@ class SupabaseRepository {
     final authorIds =
         posts.map((e) => e['author_id'].toString()).toSet().toList();
 
-    final results = await Future.wait([
+    final results = await Future.wait<dynamic>([
       db.from('profiles').select().inFilter('id', authorIds),
       db.from('post_media').select().inFilter('post_id', ids).order('position'),
       db.from('post_likes').select('post_id, user_id').inFilter('post_id', ids),
