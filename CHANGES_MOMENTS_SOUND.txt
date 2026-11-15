@@ -1,0 +1,7 @@
+CHANGES: sound for videos opened from Moments and threads
+=========================================================
+No new migration. No new packages.
+
+- Moments explore: tapping a video tile opens it with sound on.
+- Thread: a video opened from the feed starts with sound on.
+- Feed autoplay stays muted (tap the video to open its thread).

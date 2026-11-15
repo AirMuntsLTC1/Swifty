@@ -35,6 +35,7 @@ class TweetImage extends StatelessWidget {
               thumbnailUrl: model.thumbnailUrl,
               borderRadius: isRetweetImage ? 0 : 20,
               autoPlayWhenVisible: true,
+              startMuted: !opensThread,
               onTap: opensThread ? () => _openThread(context) : null,
             ),
           ),

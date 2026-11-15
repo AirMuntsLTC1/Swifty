@@ -144,9 +144,13 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
     _failed = false;
     if (mounted) setState(() {});
 
+    // mixWithOthers: this player does not take exclusive audio focus, so
+    // another player on screen cannot silence it.
+    final options = VideoPlayerOptions(mixWithOthers: true);
     final c = widget.file != null
-        ? VideoPlayerController.file(widget.file!)
-        : VideoPlayerController.networkUrl(Uri.parse(widget.url!));
+        ? VideoPlayerController.file(widget.file!, videoPlayerOptions: options)
+        : VideoPlayerController.networkUrl(Uri.parse(widget.url!),
+            videoPlayerOptions: options);
     try {
       await c.initialize();
       await c.setLooping(widget.looping);
@@ -220,7 +224,9 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
     }
     if (_active != null && _active != this) _active!._pauseFromOther();
     _active = this;
+    await c.setVolume(_muted ? 0 : 1);
     await c.play();
+    await c.setVolume(_muted ? 0 : 1);
   }
 
   void _pause() {
@@ -255,9 +261,10 @@ class _PostVideoPlayerState extends State<PostVideoPlayer> {
     }
   }
 
-  void _toggleMute() {
+  /// Speaker button. Changes the volume at once, and the icon follows it.
+  Future<void> _toggleMute() async {
     setState(() => _muted = !_muted);
-    _controller?.setVolume(_muted ? 0 : 1);
+    await _controller?.setVolume(_muted ? 0 : 1);
   }
 
   // ---------------------------------------------------------------------------

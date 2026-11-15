@@ -199,6 +199,7 @@ class _PostSlide extends StatelessWidget {
                       aspectRatio: 9 / 16,
                       borderRadius: 0,
                       autoPlayWhenVisible: true,
+                      startMuted: false,
                     ),
                   )
                 : CacheImage(path: image, fit: BoxFit.cover),
