@@ -26,5 +26,6 @@ enum NotificationType {
   Retweet,
   Follow,
   Mention,
-  Like
+  Like,
+  ListAdd
 }

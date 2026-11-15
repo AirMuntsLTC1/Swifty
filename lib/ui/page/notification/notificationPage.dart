@@ -5,6 +5,7 @@ import 'package:flutter_twitter_clone/model/notificationModel.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
 import 'package:flutter_twitter_clone/state/notificationState.dart';
 import 'package:flutter_twitter_clone/ui/page/notification/widget/follow_notification_tile.dart';
+import 'package:flutter_twitter_clone/ui/page/notification/widget/list_add_notification_tile.dart';
 import 'package:flutter_twitter_clone/ui/page/notification/widget/post_like_tile.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/widgets/customAppBar.dart';
@@ -60,6 +61,9 @@ class NotificationPageBody extends StatelessWidget {
 
   Widget _notificationRow(BuildContext context, NotificationModel model) {
     var state = Provider.of<NotificationState>(context);
+    if (model.type == NotificationType.ListAdd.toString()) {
+      return ListAddNotificationTile(model: model);
+    }
     if (model.type == NotificationType.Follow.toString()) {
       return FollowNotificationTile(
         model: model,
