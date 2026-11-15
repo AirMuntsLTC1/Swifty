@@ -12,7 +12,7 @@ class AccessibilityPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Accessibility'),
       body: DeviceSettingsBuilder(
         builder: (context, s) => ListView(
@@ -48,5 +48,7 @@ class AccessibilityPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

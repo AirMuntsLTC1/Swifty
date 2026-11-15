@@ -19,7 +19,7 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'About Swifs'),
       body: ListView(
         physics: const BouncingScrollPhysics(),
@@ -74,5 +74,7 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

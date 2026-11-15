@@ -5,6 +5,7 @@ import 'package:flutter_twitter_clone/state/feedState.dart';
 import 'package:flutter_twitter_clone/ui/page/feed/feedPostDetail.dart';
 import 'package:flutter_twitter_clone/ui/page/feed/imageViewPage.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
+import 'package:flutter_twitter_clone/widgets/video/post_video_player.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:provider/provider.dart';
 
@@ -19,6 +20,23 @@ class TweetImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (model.imagePath != null) assert(type != null);
+    if (model.imagePath != null && model.mediaKind == 'video') {
+      // Videos play inline. Tapping the video plays or pauses it, so it does
+      // not open the post; tap the text or the empty space to open the post.
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: SizedBox(
+            width: context.width * (type == TweetType.Detail ? .95 : .8) - 8,
+            child: PostVideoPlayer(
+              url: model.imagePath,
+              borderRadius: isRetweetImage ? 0 : 20,
+            ),
+          ),
+        ),
+      );
+    }
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
       alignment: Alignment.centerRight,
@@ -78,6 +96,8 @@ class TweetImage extends StatelessWidget {
     );
   }
 }
+
+
 
 
 

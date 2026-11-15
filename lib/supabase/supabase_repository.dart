@@ -424,11 +424,13 @@ class SupabaseRepository {
     final profiles = _profileMap(results[0] as List);
 
     final media = <String, String>{};
+    final mediaKinds = <String, String>{};
     for (final m in (results[1] as List)) {
-      media.putIfAbsent(
-        m['post_id'].toString(),
-        () => mediaUrl(m['storage_path'].toString()),
-      );
+      final postId = m['post_id'].toString();
+      if (!media.containsKey(postId)) {
+        media[postId] = mediaUrl(m['storage_path'].toString());
+        mediaKinds[postId] = (m['kind'] ?? 'image').toString();
+      }
     }
 
     final likes = <String, List<String>>{};
@@ -467,6 +469,7 @@ class SupabaseRepository {
         retweetCount: (row['shares'] as num?)?.toInt() ?? 0,
         createdAt: row['created_at'].toString(),
         imagePath: media[id],
+        mediaKind: mediaKinds[id],
         tags: List<String>.from((row['tagged_handles'] as List?) ?? const []),
         user: profiles[authorId] ?? fallbackUser(authorId),
         listId: (row['list_id'] ?? '').toString().isEmpty
@@ -486,6 +489,7 @@ class SupabaseRepository {
     String? imageUrl,
     String audience = 'everyone',
     String? listId,
+    String mediaKind = 'image',
   }) async {
     return _run('createPost', () async {
     final me = uid;
@@ -497,6 +501,7 @@ class SupabaseRepository {
       'p_image_url':
           (imageUrl != null && imageUrl.isNotEmpty) ? imageUrl : null,
       'p_list_id': listId,
+      'p_media_kind': mediaKind,
     });
     return id.toString();
   });
@@ -843,6 +848,8 @@ class SupabaseRepository {
   });
   }
 }
+
+
 
 
 

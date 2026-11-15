@@ -26,12 +26,14 @@ class SettingsAppBar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       iconTheme: const IconThemeData(color: Colors.blue),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     );
   }
 
   @override
   Size get preferredSize => appBarHeight;
 }
+
+
 
 

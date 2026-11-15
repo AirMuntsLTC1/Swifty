@@ -30,7 +30,7 @@ class _ContentPrefrencePageState extends State<ContentPrefrencePage> {
   Widget build(BuildContext context) {
     final st = context.watch<SettingsState>();
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Content preferences'),
       body: ListView(
         physics: const BouncingScrollPhysics(),
@@ -74,5 +74,7 @@ class _ContentPrefrencePageState extends State<ContentPrefrencePage> {
     );
   }
 }
+
+
 
 

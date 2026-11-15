@@ -4,7 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 class TitleText extends StatelessWidget {
   final String text;
   final double fontSize;
-  final Color color;
+  /// Null means "follow the theme" (black in light mode, white in dark mode).
+  final Color? color;
   final FontWeight fontWeight;
   final TextAlign textAlign;
   final TextOverflow overflow;
@@ -12,7 +13,7 @@ class TitleText extends StatelessWidget {
     this.text, {
     Key? key,
     this.fontSize = 18,
-    this.color = Colors.black,
+    this.color,
     this.fontWeight = FontWeight.w800,
     this.textAlign = TextAlign.left,
     this.overflow = TextOverflow.visible,
@@ -24,12 +25,14 @@ class TitleText extends StatelessWidget {
       style: GoogleFonts.mulish(
         fontSize: fontSize,
         fontWeight: fontWeight,
-        color: color,
+        color: color ?? Theme.of(context).colorScheme.onSurface,
       ),
       textAlign: textAlign,
       overflow: overflow,
     );
   }
 }
+
+
 
 

@@ -15,6 +15,8 @@ class FeedModel {
   int? retweetCount;
   late String createdAt;
   String? imagePath;
+  /// 'image' or 'video' when imagePath is set (null for text-only posts).
+  String? mediaKind;
   List<String>? tags;
   List<String?>? replyTweetKeyList;
   String?
@@ -35,6 +37,7 @@ class FeedModel {
       this.retweetCount,
       required this.createdAt,
       this.imagePath,
+      this.mediaKind,
       this.likeList,
       this.tags,
       this.user,
@@ -53,6 +56,7 @@ class FeedModel {
       "retweetCount": retweetCount ?? 0,
       "createdAt": createdAt,
       "imagePath": imagePath,
+      "mediaKind": mediaKind,
       "likeList": likeList,
       "tags": tags,
       "replyTweetKeyList": replyTweetKeyList,
@@ -72,8 +76,8 @@ class FeedModel {
     commentCount = map['commentCount'];
     retweetCount = map["retweetCount"] ?? 0;
     imagePath = map['imagePath'];
+    mediaKind = map['mediaKind'];
     createdAt = map['createdAt'];
-    imagePath = map['imagePath'];
     lanCode = map['lanCode'];
     user = UserModel.fromJson(map['user']);
     parentkey = map['parentkey'];
@@ -150,6 +154,8 @@ class FeedModel {
     }
   }
 }
+
+
 
 
 

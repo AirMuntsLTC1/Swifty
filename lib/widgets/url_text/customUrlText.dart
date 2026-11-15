@@ -54,7 +54,7 @@ class UrlText extends StatelessWidget {
       } else {
         widgets.add(TextSpan(
             text: result.text,
-            style: style ?? const TextStyle(color: Colors.black)));
+            style: style));
       }
     }
     return widgets;
@@ -96,5 +96,7 @@ class _ResultMatch {
   late bool isUrl;
   late String text;
 }
+
+
 
 

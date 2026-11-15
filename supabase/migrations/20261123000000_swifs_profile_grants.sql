@@ -8,3 +8,5 @@ grant update (display_name, bio, avatar_url, cover_url, location, date_of_birth)
   on public.profiles to authenticated;
 
 
+
+

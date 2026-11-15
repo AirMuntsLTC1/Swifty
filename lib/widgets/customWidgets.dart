@@ -9,7 +9,6 @@ Widget customTitleText(String? title, {BuildContext? context}) {
   return Text(
     title ?? '',
     style: const TextStyle(
-      color: Colors.black87,
       fontFamily: 'HelveticaNeue',
       fontWeight: FontWeight.w900,
       fontSize: 20,
@@ -76,5 +75,7 @@ Widget customText(
 Widget loader() {
   return const Center(child: SwiflyLoader());
 }
+
+
 
 

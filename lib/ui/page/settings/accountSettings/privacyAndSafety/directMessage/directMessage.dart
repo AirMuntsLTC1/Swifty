@@ -27,7 +27,7 @@ class _DirectMessagesPageState extends State<DirectMessagesPage> {
   Widget build(BuildContext context) {
     final st = context.watch<SettingsState>();
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Direct messages'),
       body: ListView(
         physics: const BouncingScrollPhysics(),
@@ -61,5 +61,7 @@ class _DirectMessagesPageState extends State<DirectMessagesPage> {
     );
   }
 }
+
+
 
 

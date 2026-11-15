@@ -7,3 +7,5 @@ Apply in Termux:
 After install: uninstall the old Fwitter/Swifly app once, then reinstall so the new launcher name and icon show.
 
 
+
+

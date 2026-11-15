@@ -69,7 +69,9 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   UrlText(
                     text: state.userModel!.displayName ?? "",
                     style: TextStyles.onPrimaryTitleText
-                        .copyWith(color: Colors.black, fontSize: 20),
+                        .copyWith(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 20),
                   ),
                   const SizedBox(
                     width: 3,
@@ -89,7 +91,10 @@ class _SidebarMenuState extends State<SidebarMenu> {
               subtitle: customText(
                 state.userModel!.userName,
                 style: TextStyles.onPrimarySubTitleText
-                    .copyWith(color: Colors.black54, fontSize: 15),
+                    .copyWith(
+                        color: Theme.of(context).colorScheme.onSurface
+                            .withOpacity(0.6),
+                        fontSize: 15),
               ),
               trailing: customIcon(context,
                   icon: AppIcon.arrowDown,
@@ -303,5 +308,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
     );
   }
 }
+
+
 
 

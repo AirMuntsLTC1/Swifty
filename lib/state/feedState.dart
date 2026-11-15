@@ -208,6 +208,7 @@ class FeedState extends AppState {
         tags: model.tags ?? const [],
         imageUrl: model.imagePath,
         listId: listId,
+        mediaKind: model.mediaKind ?? 'image',
       );
       tweetKey = newId;
       // Read the row back (with author and media) so it appears at once.
@@ -492,6 +493,8 @@ class FeedState extends AppState {
     _refreshPost(postId);
   }
 }
+
+
 
 
 

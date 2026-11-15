@@ -83,7 +83,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     final settings = context.watch<SettingsState>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: SettingsAppBar(title: 'Account', subtitle: user.userName),
       body: ListView(
         physics: const BouncingScrollPhysics(),
@@ -129,5 +129,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
   }
 }
+
+
 
 

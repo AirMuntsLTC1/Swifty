@@ -7,3 +7,5 @@ Apply in Termux:
 Then run supabase/migrations/20261118000000_swifs_settings_columns.sql in the Supabase SQL Editor.
 
 
+
+

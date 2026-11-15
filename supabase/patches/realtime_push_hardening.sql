@@ -84,3 +84,5 @@ revoke all on function public.swifly_register_push_token(text, text) from public
 grant execute on function public.swifly_register_push_token(text, text) to authenticated;
 
 
+
+

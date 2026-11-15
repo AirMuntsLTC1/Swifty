@@ -11,6 +11,7 @@ import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/model/moment_models.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
+import 'package:flutter_twitter_clone/widgets/video/post_video_player.dart';
 
 const Color kMomentBorder = Color(0xffEFF3F4);
 const Color kMomentMuted = Color(0xff536471);
@@ -215,12 +216,10 @@ class CapsuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cover = capsule.posts
-        .firstWhere(
-          (p) => p.imagePath != null && p.imagePath!.isNotEmpty,
-          orElse: () => capsule.posts.first,
-        )
-        .imagePath;
+    // Use the first photo as the cover. Videos are not used as images.
+    final photos = capsule.posts.where(
+        (p) => p.imagePath != null && p.imagePath!.isNotEmpty && p.mediaKind != 'video');
+    final String? cover = photos.isEmpty ? null : photos.first.imagePath;
 
     return GestureDetector(
       onTap: onTap,
@@ -295,7 +294,9 @@ class MomentTile extends StatelessWidget {
         child: Container(
           color: hasImage ? Colors.black : momentColorFor(post.key ?? text),
           child: hasImage
-              ? CacheImage(path: image, fit: BoxFit.cover)
+              ? post.mediaKind == 'video'
+                  ? const _VideoTileCover()
+                  : CacheImage(path: image, fit: BoxFit.cover)
               : Padding(
                   padding: const EdgeInsets.all(12),
                   child: Center(
@@ -473,3 +474,24 @@ class _FloatingEmojiState extends State<_FloatingEmoji>
 }
 
 
+
+
+
+/// Explore-grid cover for a video post: a dark tile with a play badge.
+class _VideoTileCover extends StatelessWidget {
+  const _VideoTileCover();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: Colors.black),
+        Center(
+          child: Icon(Icons.play_circle_fill_rounded,
+              color: Colors.white70, size: 44),
+        ),
+      ],
+    );
+  }
+}

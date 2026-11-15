@@ -25,3 +25,5 @@ create policy swifs_user_settings_update_own on public.user_settings
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 
+
+

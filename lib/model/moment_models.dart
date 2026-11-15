@@ -58,6 +58,7 @@ class MomentStory {
     required this.createdAt,
     required this.expiresAt,
     this.mediaUrl,
+    this.mediaType = 'image',
     this.text,
     this.bgColor,
     this.place,
@@ -72,6 +73,9 @@ class MomentStory {
   final DateTime createdAt;
   final DateTime expiresAt;
   final String? mediaUrl;
+
+  /// 'image', 'video', or 'text' (no media).
+  final String mediaType;
   final String? text;
   final int? bgColor;
   final String? place;
@@ -106,6 +110,7 @@ class MomentStory {
       createdAt: DateTime.parse(row['created_at'].toString()).toLocal(),
       expiresAt: DateTime.parse(row['expires_at'].toString()).toLocal(),
       mediaUrl: photo.isEmpty ? null : resolveUrl(photo),
+      mediaType: (row['media_type'] ?? 'image').toString(),
       text: text,
       bgColor: (row['bg_color'] as num?)?.toInt(),
       place: place.isEmpty ? null : place,
@@ -160,5 +165,7 @@ class StoryStats {
 
   int get totalReactions => reactions.values.fold(0, (a, b) => a + b);
 }
+
+
 
 

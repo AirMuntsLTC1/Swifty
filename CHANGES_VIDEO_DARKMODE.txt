@@ -1,0 +1,38 @@
+CHANGES: video posts, video stories, dark mode text
+====================================================
+
+RUN FIRST (Supabase SQL Editor):
+  supabase/migrations/20261203000000_swifs_post_video.sql
+  Posts fail until this is run, because the app now sends p_media_kind.
+
+pubspec.yaml: added video_player ^2.8.6 (run flutter pub get).
+
+NEW
+  lib/widgets/video/post_video_player.dart   shared inline video player
+
+POSTS
+  model/feedModel.dart                        mediaKind field
+  supabase/supabase_repository.dart           reads post_media.kind, sends p_media_kind
+  state/feedState.dart, state/base/tweetBaseState.dart   pass mediaKind
+  ui/page/feed/composeTweet/*                 video button, preview, upload as video
+  widgets/tweet/widgets/tweetImage.dart       plays video inline in the feed
+
+STORIES
+  model/moment_models.dart                    mediaType field
+  supabase/supabase_moments_repository.dart   uploads and saves video stories
+  ui/page/moments/story_composer_page.dart    Video button (30 s max)
+  ui/page/moments/story_viewer_page.dart      plays video stories
+  ui/page/moments/moments_widgets.dart, capsule_page.dart   video-safe tiles and covers
+
+DARK MODE
+  widgets/newWidget/title_text.dart           follows theme when no color given
+  widgets/tweet/tweet.dart, url_text/customUrlText.dart, ui/theme/text_styles.dart,
+  widgets/customWidgets.dart                  text follows theme
+  ui/page/settings/**                         theme background and text
+  ui/page/profile/follow/*                    theme background
+  ui/page/common/sidebar.dart                 drawer name and handle follow theme
+
+NOT YET DONE
+  Lists, chat, moments/story composer, explore: hardcoded black text and white backgrounds.
+  Media-only posts (no text) are not allowed yet.
+  Video assets/ folder is NOT in this zip: copy assets/ from your project.

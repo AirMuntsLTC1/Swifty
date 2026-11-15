@@ -7,3 +7,5 @@ Apply in Termux:
 Changed file: lib/ui/theme/theme.dart (dividerColor and dividerTheme added).
 
 
+
+

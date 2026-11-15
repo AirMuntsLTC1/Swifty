@@ -11,7 +11,7 @@ class ProxyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Proxy'),
       body: DeviceSettingsBuilder(
         builder: (context, s) => ListView(
@@ -50,5 +50,7 @@ class ProxyPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

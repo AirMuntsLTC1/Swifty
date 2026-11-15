@@ -7,3 +7,5 @@ Apply in Termux:
 Then run supabase/migrations/20261119000000_swifs_create_post.sql in the Supabase SQL Editor.
 
 
+
+

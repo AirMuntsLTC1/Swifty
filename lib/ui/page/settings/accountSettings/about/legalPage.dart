@@ -76,17 +76,19 @@ Open-source software used in this app is listed under "Legal notices" in the Abo
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: SettingsAppBar(title: title),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Text(
           body,
-          style: const TextStyle(fontSize: 15, height: 1.45, color: Colors.black),
+          style: const TextStyle(fontSize: 15, height: 1.45),
         ),
       ),
     );
   }
 }
+
+
 
 

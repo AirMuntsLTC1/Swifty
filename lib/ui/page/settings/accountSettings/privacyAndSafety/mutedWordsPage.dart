@@ -55,7 +55,7 @@ class _MutedWordsPageState extends State<MutedWordsPage> {
     final words = st.getList('muted_words');
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Muted words'),
       body: Column(
         children: [
@@ -113,5 +113,7 @@ class _MutedWordsPageState extends State<MutedWordsPage> {
     );
   }
 }
+
+
 
 

@@ -41,6 +41,7 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
   late ScrollController scrollController;
 
   File? _image;
+  File? _video;
   late TextEditingController _textEditingController;
 
   @override
@@ -78,6 +79,7 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
   void _onCrossIconPressed() {
     setState(() {
       _image = null;
+      _video = null;
     });
   }
 
@@ -114,6 +116,14 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
   void _onImageIconSelected(File file) {
     setState(() {
       _image = file;
+      _video = null; // one kind of media per post
+    });
+  }
+
+  void _onVideoIconSelected(File file) {
+    setState(() {
+      _video = file;
+      _image = null;
     });
   }
 
@@ -131,14 +141,17 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
 
       // Images are uploaded first and the public URL is stored on the row.
       // If the upload fails, the user is told; nothing is dropped silently.
-      if (_image != null) {
-        final imageUrl = await state.uploadFile(_image!);
-        if (imageUrl == null) {
-          _showSubmitError(
-              'Image upload failed. Check your connection and try again.');
+      final media = _video ?? _image;
+      if (media != null) {
+        final mediaUrl = await state.uploadFile(media);
+        if (mediaUrl == null) {
+          _showSubmitError(_video != null
+              ? 'Video upload failed. Check your connection and try again.'
+              : 'Image upload failed. Check your connection and try again.');
           return;
         }
-        tweetModel.imagePath = imageUrl;
+        tweetModel.imagePath = mediaUrl;
+        tweetModel.mediaKind = _video != null ? 'video' : 'image';
       }
 
       String? tweetId;
@@ -264,6 +277,7 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
             child: ComposeBottomIconWidget(
               textEditingController: _textEditingController,
               onImageIconSelected: _onImageIconSelected,
+              onVideoIconSelected: _onVideoIconSelected,
               onListIconPressed: _openListPicker,
             ),
           ),
@@ -383,6 +397,7 @@ class _ComposeRetweet
             padding: const EdgeInsets.only(right: 16, left: 80, bottom: 8),
             child: ComposeTweetImage(
               image: viewState._image,
+              video: viewState._video,
               onCrossIconPressed: viewState._onCrossIconPressed,
             ),
           ),
@@ -550,6 +565,7 @@ class _ComposeTweet
               children: <Widget>[
                 ComposeTweetImage(
                   image: viewState._image,
+                  video: viewState._video,
                   onCrossIconPressed: viewState._onCrossIconPressed,
                 ),
                 _UserList(
@@ -684,6 +700,8 @@ class _UserTile extends StatelessWidget {
     );
   }
 }
+
+
 
 
 

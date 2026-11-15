@@ -11,12 +11,14 @@ import 'package:flutter_twitter_clone/widgets/customWidgets.dart';
 class ComposeBottomIconWidget extends StatefulWidget {
   final TextEditingController textEditingController;
   final Function(File) onImageIconSelected;
+  final Function(File) onVideoIconSelected;
   final VoidCallback onListIconPressed;
 
   const ComposeBottomIconWidget({
     Key? key,
     required this.textEditingController,
     required this.onImageIconSelected,
+    required this.onVideoIconSelected,
     required this.onListIconPressed,
   }) : super(key: key);
 
@@ -74,6 +76,11 @@ class _ComposeBottomIconWidgetState extends State<ComposeBottomIconWidget> {
                 icon: AppIcon.image,
                 isTwitterIcon: false,
                 iconColor: AppColor.primary),
+          ),
+          IconButton(
+            tooltip: 'Video',
+            onPressed: pickVideo,
+            icon: const Icon(Icons.videocam_outlined, color: AppColor.primary),
           ),
           IconButton(
             onPressed: () => setImage(ImageSource.camera),
@@ -138,11 +145,26 @@ class _ComposeBottomIconWidgetState extends State<ComposeBottomIconWidget> {
     });
   }
 
+  /// Gallery only. Clips are limited to one minute to keep uploads small.
+  void pickVideo() {
+    ImagePicker()
+        .pickVideo(
+          source: ImageSource.gallery,
+          maxDuration: const Duration(seconds: 60),
+        )
+        .then((XFile? file) {
+      if (file == null) return;
+      widget.onVideoIconSelected(File(file.path));
+    });
+  }
+
   double getTweetLimit() {
     if (tweet.isEmpty) return 0.0;
     if (tweet.length > 280) return 1.0;
     return tweet.length / 280;
   }
 }
+
+
 
 

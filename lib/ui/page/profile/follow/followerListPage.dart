@@ -29,10 +29,10 @@ class FollowerListPage extends StatelessWidget {
     if (context.watch<FollowListState>().isbusy) {
       return SizedBox(
         height: context.height,
-        child: const CustomScreenLoader(
+        child: CustomScreenLoader(
           height: double.infinity,
           width: double.infinity,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         ),
       );
     }
@@ -51,5 +51,7 @@ class FollowerListPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

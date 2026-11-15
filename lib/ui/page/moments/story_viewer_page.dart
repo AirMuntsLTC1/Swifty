@@ -16,6 +16,7 @@ import 'package:flutter_twitter_clone/model/moment_models.dart';
 import 'package:flutter_twitter_clone/supabase/supabase_moments_repository.dart';
 import 'package:flutter_twitter_clone/ui/page/moments/moments_widgets.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
+import 'package:flutter_twitter_clone/widgets/video/post_video_player.dart';
 
 class StoryViewerPage extends StatefulWidget {
   const StoryViewerPage({
@@ -446,6 +447,36 @@ class _StoryBody extends StatelessWidget {
     final url = story.mediaUrl;
     final caption = story.text;
 
+    if (url != null && story.mediaType == 'video') {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(color: Colors.black),
+          Center(
+            child: PostVideoPlayer(
+              url: url,
+              aspectRatio: 9 / 16,
+              borderRadius: 0,
+              fit: BoxFit.cover,
+              autoPlay: true,
+              startMuted: false,
+            ),
+          ),
+          if (caption != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 200,
+              child: Text(
+                caption,
+                textAlign: TextAlign.center,
+                style: momentTitle(size: 20, color: Colors.white),
+              ),
+            ),
+        ],
+      );
+    }
+
     if (url != null) {
       return Stack(
         fit: StackFit.expand,
@@ -488,5 +519,7 @@ class _StoryBody extends StatelessWidget {
     );
   }
 }
+
+
 
 

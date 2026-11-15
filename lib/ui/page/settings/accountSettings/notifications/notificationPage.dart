@@ -28,7 +28,7 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget build(BuildContext context) {
     final st = context.watch<SettingsState>();
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Notifications'),
       body: ListView(
         physics: const BouncingScrollPhysics(),
@@ -102,5 +102,7 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 }
+
+
 
 

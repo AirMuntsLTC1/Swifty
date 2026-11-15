@@ -56,3 +56,5 @@ grant execute on function public.swifs_create_post(text, text, text[], text, uui
   to authenticated;
 
 
+
+

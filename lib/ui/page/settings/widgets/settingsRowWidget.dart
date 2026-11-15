@@ -9,7 +9,7 @@ class SettingRowWidget extends StatelessWidget {
     Key? key,
     this.navigateTo,
     this.subtitle,
-    this.textColor = Colors.black,
+    this.textColor,
     this.onPressed,
     this.vPadding = 0,
     this.showDivider = true,
@@ -22,7 +22,8 @@ class SettingRowWidget extends StatelessWidget {
   final bool? showCheckBox, visibleSwitch;
   final String? navigateTo;
   final String? subtitle, title;
-  final Color textColor;
+  /// Null follows the theme (black in light mode, white in dark mode).
+  final Color? textColor;
   final Function? onPressed;
   final double vPadding;
   final bool? switchValue;
@@ -70,6 +71,8 @@ class SettingRowWidget extends StatelessWidget {
     );
   }
 }
+
+
 
 
 

@@ -68,6 +68,7 @@ class TweetBaseState extends AppState {
         tags: tweet.tags ?? const [],
         imageUrl: tweet.imagePath,
         listId: listId ?? tweet.listId,
+        mediaKind: tweet.mediaKind ?? 'image',
       );
 
   /// Upload an image to the post-media bucket and return its URL.
@@ -80,6 +81,8 @@ class TweetBaseState extends AppState {
     }
   }
 }
+
+
 
 
 

@@ -24,7 +24,7 @@ class SettingsAndPrivacyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = Provider.of<AuthState>(context).userModel ?? UserModel();
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: SettingsAppBar(
         title: 'Settings and privacy',
         subtitle: user.userName,
@@ -92,5 +92,7 @@ class SettingsAndPrivacyPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

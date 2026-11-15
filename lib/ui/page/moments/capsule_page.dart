@@ -10,6 +10,7 @@ import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
 import 'package:flutter_twitter_clone/ui/page/moments/moments_widgets.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
+import 'package:flutter_twitter_clone/widgets/video/post_video_player.dart';
 
 class CapsulePage extends StatefulWidget {
   const CapsulePage({
@@ -183,12 +184,23 @@ class _PostSlide extends StatelessWidget {
     final hasImage = image != null && image.isNotEmpty;
     final text = (post.description ?? '').trim();
 
+    final isVideo = post.mediaKind == 'video';
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        hasImage
-            ? CacheImage(path: image, fit: BoxFit.cover)
-            : Container(color: momentColorFor(post.key ?? text)),
+        !hasImage
+            ? Container(color: momentColorFor(post.key ?? text))
+            : isVideo
+                ? Center(
+                    child: PostVideoPlayer(
+                      url: image,
+                      aspectRatio: 9 / 16,
+                      borderRadius: 0,
+                      autoPlay: true,
+                    ),
+                  )
+                : CacheImage(path: image, fit: BoxFit.cover),
         if (hasImage)
           const DecoratedBox(
             decoration: BoxDecoration(
@@ -249,5 +261,7 @@ class _PostSlide extends StatelessWidget {
     );
   }
 }
+
+
 
 

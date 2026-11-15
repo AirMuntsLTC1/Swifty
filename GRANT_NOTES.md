@@ -7,3 +7,5 @@ If it still fails, run this in the SQL Editor and send me the result:
 select privilege_type, column_name from information_schema.column_privileges where table_name = 'profiles' and grantee = 'authenticated';
 
 
+
+

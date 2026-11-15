@@ -47,7 +47,7 @@ class _BlockedAccountsPageState extends State<BlockedAccountsPage> {
   Widget build(BuildContext context) {
     final accounts = _accounts;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Blocked accounts'),
       body: accounts == null
           ? const Center(child: CircularProgressIndicator())
@@ -97,5 +97,7 @@ class _BlockedAccountsPageState extends State<BlockedAccountsPage> {
     );
   }
 }
+
+
 
 

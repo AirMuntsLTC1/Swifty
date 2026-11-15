@@ -7,3 +7,5 @@ Apply in Termux:
 Then run supabase/migrations/20261122000000_swifs_profile_fields.sql in the Supabase SQL Editor.
 
 
+
+

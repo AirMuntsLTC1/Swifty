@@ -12,7 +12,7 @@ class DataUsagePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Data usage'),
       body: DeviceSettingsBuilder(
         builder: (context, s) => ListView(
@@ -86,5 +86,7 @@ class DataUsagePage extends StatelessWidget {
     );
   }
 }
+
+
 
 

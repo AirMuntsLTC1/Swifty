@@ -117,6 +117,7 @@ class MomentsRepository {
   /// on a colored background. Expires 24 hours after posting.
   Future<String> createStory({
     File? image,
+    File? video,
     String? text,
     int? bgColor,
     String? place,
@@ -127,13 +128,19 @@ class MomentsRepository {
 
       final caption = text?.trim() ?? '';
       final hasText = caption.isNotEmpty;
-      if (image == null && !hasText) {
-        throw StateError('Add a photo or some text first');
+      if (image == null && video == null && !hasText) {
+        throw StateError('Add a photo, a video or some text first');
       }
 
+      // A story holds one piece of media. A video takes priority.
       String? photoUrl;
-      if (image != null) {
+      String mediaType = 'text';
+      if (video != null) {
+        photoUrl = await _base.uploadFile(kStoriesBucket, video);
+        mediaType = 'video';
+      } else if (image != null) {
         photoUrl = await _base.uploadFile(kStoriesBucket, image);
+        mediaType = 'image';
       }
 
       final now = DateTime.now().toUtc();
@@ -141,7 +148,7 @@ class MomentsRepository {
           .from('stories')
           .insert({
             'author_id': me,
-            'media_type': photoUrl != null ? 'image' : 'text',
+            'media_type': mediaType,
             'photo_path': photoUrl,
             'bg_color': photoUrl == null ? bgColor : null,
             'layers': [
@@ -378,5 +385,7 @@ class MomentsRepository {
     await db.removeChannel(channel);
   }
 }
+
+
 
 

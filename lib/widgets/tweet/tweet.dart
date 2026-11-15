@@ -183,7 +183,7 @@ class _TweetBody extends StatelessWidget {
             ? FontWeight.w400
             : FontWeight.w400;
     TextStyle textStyle = TextStyle(
-        color: Colors.black,
+        color: Theme.of(context).colorScheme.onSurface,
         fontSize: descriptionFontSize,
         fontWeight: descriptionFontWeight);
     TextStyle urlStyle = TextStyle(
@@ -342,7 +342,7 @@ class _TweetDetailBody extends StatelessWidget {
             ? FontWeight.w300
             : FontWeight.w400;
     TextStyle textStyle = TextStyle(
-        color: Colors.black,
+        color: Theme.of(context).colorScheme.onSurface,
         fontSize: descriptionFontSize,
         fontWeight: descriptionFontWeight);
     TextStyle urlStyle = TextStyle(
@@ -441,6 +441,8 @@ class _TweetDetailBody extends StatelessWidget {
     );
   }
 }
+
+
 
 
 

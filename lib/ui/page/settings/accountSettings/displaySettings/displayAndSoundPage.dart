@@ -12,7 +12,7 @@ class DisplayAndSoundPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: 'Display and sound'),
       body: DeviceSettingsBuilder(
         builder: (context, s) => ListView(
@@ -66,5 +66,7 @@ class DisplayAndSoundPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

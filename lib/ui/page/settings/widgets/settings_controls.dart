@@ -10,7 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/state/deviceSettings.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 
-const TextStyle kSettingTitle = TextStyle(fontSize: 16, color: Colors.black);
+const TextStyle kSettingTitle = TextStyle(fontSize: 16);
 const TextStyle kSettingSubtitle =
     TextStyle(fontSize: 13, color: AppColor.darkGrey);
 const EdgeInsets kSettingPadding = EdgeInsets.symmetric(horizontal: 18);
@@ -176,7 +176,7 @@ class SettingActionTile extends StatelessWidget {
         title,
         style: TextStyle(
           fontSize: 16,
-          color: destructive ? TwitterColor.ceriseRed : Colors.black,
+          color: destructive ? TwitterColor.ceriseRed : null,
         ),
       ),
       subtitle: subtitle == null ? null : Text(subtitle!, style: kSettingSubtitle),
@@ -232,7 +232,7 @@ Future<T?> showChoiceDialog<T>(
   return showDialog<T>(
     context: context,
     builder: (ctx) => AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(ctx).dialogBackgroundColor,
       surfaceTintColor: Colors.transparent,
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
       contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -266,7 +266,7 @@ Future<String?> showTextInputDialog(
   return showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(ctx).dialogBackgroundColor,
       surfaceTintColor: Colors.transparent,
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
       content: TextField(
@@ -300,7 +300,7 @@ Future<bool> showConfirmDialog(
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(ctx).dialogBackgroundColor,
       surfaceTintColor: Colors.transparent,
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
       content: Text(message, style: kSettingSubtitle),
@@ -323,5 +323,7 @@ Future<bool> showConfirmDialog(
   );
   return ok ?? false;
 }
+
+
 
 

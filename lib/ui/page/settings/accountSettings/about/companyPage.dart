@@ -14,7 +14,7 @@ class CompanyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const SettingsAppBar(title: AppInfo.companyName),
       body: ListView(
         padding: const EdgeInsets.all(18),
@@ -45,7 +45,6 @@ class CompanyPage extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: Colors.black,
                   ),
                 ),
               ),
@@ -54,7 +53,7 @@ class CompanyPage extends StatelessWidget {
           const SizedBox(height: 20),
           const Text(
             AppInfo.companyDescription,
-            style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
+            style: TextStyle(fontSize: 15, height: 1.5),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -134,5 +133,7 @@ class _ContactButton extends StatelessWidget {
     );
   }
 }
+
+
 
 

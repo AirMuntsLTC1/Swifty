@@ -15,7 +15,6 @@ class TextStyles {
 
   static TextStyle get titleStyle {
     return const TextStyle(
-      color: Colors.black,
       fontSize: 16,
       fontWeight: FontWeight.bold,
     );
@@ -36,5 +35,7 @@ class TextStyles {
         color: AppColor.darkGrey, fontSize: 14, fontWeight: FontWeight.bold);
   }
 }
+
+
 
 

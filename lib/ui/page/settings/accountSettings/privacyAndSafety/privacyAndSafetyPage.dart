@@ -35,7 +35,7 @@ class _PrivacyAndSaftyPageState extends State<PrivacyAndSaftyPage> {
     final user = Provider.of<AuthState>(context).userModel ?? UserModel();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: SettingsAppBar(
         title: 'Privacy and safety',
         subtitle: user.userName,
@@ -128,5 +128,7 @@ class _PrivacyAndSaftyPageState extends State<PrivacyAndSaftyPage> {
     );
   }
 }
+
+
 
 

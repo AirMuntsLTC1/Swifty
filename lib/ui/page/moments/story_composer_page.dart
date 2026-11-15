@@ -16,6 +16,7 @@ import 'package:flutter_twitter_clone/supabase/supabase_moments_repository.dart'
 import 'package:flutter_twitter_clone/ui/page/moments/moments_widgets.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
+import 'package:flutter_twitter_clone/widgets/video/post_video_player.dart';
 
 class StoryComposerPage extends StatefulWidget {
   const StoryComposerPage({super.key});
@@ -39,6 +40,7 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
   final TextEditingController _text = TextEditingController();
 
   File? _photo;
+  File? _video;
   int _bgColor = kMomentBgColors.first;
   bool _posting = false;
 
@@ -48,8 +50,10 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
     super.dispose();
   }
 
+  bool get _hasMedia => _photo != null || _video != null;
+
   bool get _canPost =>
-      !_posting && (_photo != null || _text.text.trim().isNotEmpty);
+      !_posting && (_hasMedia || _text.text.trim().isNotEmpty);
 
   Future<void> _pick(ImageSource source) async {
     try {
@@ -59,10 +63,31 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
         imageQuality: 85,
       );
       if (picked != null && mounted) {
-        setState(() => _photo = File(picked.path));
+        setState(() {
+          _photo = File(picked.path);
+          _video = null;
+        });
       }
     } catch (error) {
       showAppError(error, where: 'Pick photo');
+    }
+  }
+
+  /// Gallery only. Story clips are limited to 30 seconds.
+  Future<void> _pickVideo() async {
+    try {
+      final picked = await _picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(seconds: 30),
+      );
+      if (picked != null && mounted) {
+        setState(() {
+          _video = File(picked.path);
+          _photo = null;
+        });
+      }
+    } catch (error) {
+      showAppError(error, where: 'Pick video');
     }
   }
 
@@ -72,8 +97,9 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
     try {
       await _repo.createStory(
         image: _photo,
+        video: _video,
         text: _text.text,
-        bgColor: _photo == null ? _bgColor : null,
+        bgColor: _hasMedia ? null : _bgColor,
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
@@ -84,6 +110,8 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
   @override
   Widget build(BuildContext context) {
     final hasPhoto = _photo != null;
+    final hasVideo = _video != null;
+    final hasMedia = hasPhoto || hasVideo;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -137,10 +165,16 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      hasPhoto
-                          ? Image.file(_photo!, fit: BoxFit.cover)
-                          : Container(color: Color(_bgColor)),
-                      if (hasPhoto) Container(color: Colors.black26),
+                      hasVideo
+                          ? PostVideoPlayer(
+                              file: _video!,
+                              aspectRatio: 4 / 5,
+                              borderRadius: 0,
+                            )
+                          : hasPhoto
+                              ? Image.file(_photo!, fit: BoxFit.cover)
+                              : Container(color: Color(_bgColor)),
+                      if (hasMedia) Container(color: Colors.black26),
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
@@ -154,16 +188,16 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                               LengthLimitingTextInputFormatter(_maxChars),
                             ],
                             style: momentTitle(
-                              size: hasPhoto ? 20 : 26,
+                              size: hasMedia ? 20 : 26,
                               color: Colors.white,
                             ),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: hasPhoto
+                              hintText: hasMedia
                                   ? 'Add a caption'
                                   : 'Type something…',
                               hintStyle: momentMuted(
-                                size: hasPhoto ? 18 : 22,
+                                size: hasMedia ? 18 : 22,
                                 color: Colors.white70,
                               ),
                             ),
@@ -175,7 +209,7 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (!hasPhoto)
+              if (!hasMedia)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -214,18 +248,29 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _actionButton(
+                      Icons.videocam_outlined,
+                      'Video',
+                      _pickVideo,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _actionButton(
                       LucideIcons.camera,
                       'Camera',
                       () => _pick(ImageSource.camera),
                     ),
                   ),
-                  if (hasPhoto) ...[
+                  if (hasMedia) ...[
                     const SizedBox(width: 10),
                     Expanded(
                       child: _actionButton(
                         LucideIcons.trash2,
                         'Remove',
-                        () => setState(() => _photo = null),
+                        () => setState(() {
+                          _photo = null;
+                          _video = null;
+                        }),
                       ),
                     ),
                   ],
@@ -273,5 +318,7 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
     );
   }
 }
+
+
 
 
