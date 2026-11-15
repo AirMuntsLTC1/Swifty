@@ -4,14 +4,29 @@ import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsRowWidget.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
+import 'package:flutter_twitter_clone/state/settingsState.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:provider/provider.dart';
 
-class PrivacyAndSaftyPage extends StatelessWidget {
+class PrivacyAndSaftyPage extends StatefulWidget {
   const PrivacyAndSaftyPage({Key? key}) : super(key: key);
 
   @override
+  State<PrivacyAndSaftyPage> createState() => _PrivacyAndSaftyPageState();
+}
+
+class _PrivacyAndSaftyPageState extends State<PrivacyAndSaftyPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) context.read<SettingsState>().ensureLoaded();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final st = context.watch<SettingsState>();
     var user = Provider.of<AuthState>(context).userModel ?? UserModel();
     return Scaffold(
       backgroundColor: TwitterColor.white,
@@ -21,7 +36,7 @@ class PrivacyAndSaftyPage extends StatelessWidget {
       ),
       body: ListView(
         physics: const BouncingScrollPhysics(),
-        children: const <Widget>[
+        children: <Widget>[
           HeaderWidget('Tweets'),
           SettingRowWidget(
             "Protect your tweet",
@@ -29,6 +44,8 @@ class PrivacyAndSaftyPage extends StatelessWidget {
                 'Only current followers and people you approve in future will be able to see your tweets.',
             vPadding: 15,
             showDivider: false,
+            switchValue: st.get('protected'),
+            onSwitchChanged: (v) => st.set('protected', v),
             visibleSwitch: true,
           ),
           SettingRowWidget(
@@ -53,6 +70,8 @@ class PrivacyAndSaftyPage extends StatelessWidget {
                 'If selected, you can go live and comment on Periscope broadcasts, and people will be able to see when you\'re watching. if this setting is off, people won\'t be able comment or broadcast live.',
             vPadding: 15,
             showDivider: false,
+            switchValue: st.get('live_video'),
+            onSwitchChanged: (v) => st.set('live_video', v),
             visibleSwitch: true,
           ),
           HeaderWidget(
@@ -79,12 +98,16 @@ class PrivacyAndSaftyPage extends StatelessWidget {
             "Display media that may contain sensitive content",
             vPadding: 15,
             showDivider: false,
+            switchValue: st.get('sensitive_media_display'),
+            onSwitchChanged: (v) => st.set('sensitive_media_display', v),
             visibleSwitch: true,
           ),
           SettingRowWidget(
             "Mark media you tweet as containing material thta may be sensitive",
             vPadding: 15,
             showDivider: false,
+            switchValue: st.get('sensitive_media_mark'),
+            onSwitchChanged: (v) => st.set('sensitive_media_mark', v),
             visibleSwitch: true,
           ),
           SettingRowWidget(
@@ -126,5 +149,7 @@ class PrivacyAndSaftyPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

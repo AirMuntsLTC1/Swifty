@@ -4,14 +4,29 @@ import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsRowWidget.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
+import 'package:flutter_twitter_clone/state/settingsState.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:provider/provider.dart';
 
-class NotificationPage extends StatelessWidget {
+class NotificationPage extends StatefulWidget {
   const NotificationPage({Key? key}) : super(key: key);
 
   @override
+  State<NotificationPage> createState() => _NotificationPageState();
+}
+
+class _NotificationPageState extends State<NotificationPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) context.read<SettingsState>().ensureLoaded();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final st = context.watch<SettingsState>();
     var user = Provider.of<AuthState>(context).userModel ?? UserModel();
     return Scaffold(
       backgroundColor: TwitterColor.white,
@@ -20,7 +35,7 @@ class NotificationPage extends StatelessWidget {
         subtitle: user.userName,
       ),
       body: ListView(
-        children: const <Widget>[
+        children: <Widget>[
           HeaderWidget('Filters'),
           SettingRowWidget(
             "Quality filter",
@@ -41,7 +56,13 @@ class NotificationPage extends StatelessWidget {
             subtitle:
                 'Display a badge with the number of notifications waiting for you inside the Swifs app.',
           ),
-          SettingRowWidget("Push notifications"),
+          SettingRowWidget(
+            "Push notifications",
+            showDivider: true,
+            visibleSwitch: true,
+            switchValue: st.get('push_notifications'),
+            onSwitchChanged: (v) => st.set('push_notifications', v),
+          ),
           SettingRowWidget("SMS notifications"),
           SettingRowWidget(
             "Email notifications",
@@ -52,5 +73,7 @@ class NotificationPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

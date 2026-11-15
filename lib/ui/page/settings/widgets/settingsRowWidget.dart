@@ -15,6 +15,8 @@ class SettingRowWidget extends StatelessWidget {
     this.showDivider = true,
     this.visibleSwitch,
     this.showCheckBox,
+    this.switchValue,
+    this.onSwitchChanged,
   }) : super(key: key);
   final bool showDivider;
   final bool? showCheckBox, visibleSwitch;
@@ -23,6 +25,8 @@ class SettingRowWidget extends StatelessWidget {
   final Color textColor;
   final Function? onPressed;
   final double vPadding;
+  final bool? switchValue;
+  final ValueChanged<bool>? onSwitchChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -58,9 +62,13 @@ class SettingRowWidget extends StatelessWidget {
             trailing: CustomCheckBox(
               isChecked: showCheckBox,
               visibleSwitch: visibleSwitch,
+              switchValue: switchValue,
+              onSwitchChanged: onSwitchChanged,
             )),
         !showDivider ? const SizedBox() : const Divider(height: 0)
       ],
     );
   }
 }
+
+

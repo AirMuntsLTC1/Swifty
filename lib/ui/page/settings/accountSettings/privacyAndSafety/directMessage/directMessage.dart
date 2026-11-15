@@ -1,17 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_twitter_clone/model/user.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
+import 'package:flutter_twitter_clone/state/settingsState.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/headerWidget.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsAppbar.dart';
 import 'package:flutter_twitter_clone/ui/page/settings/widgets/settingsRowWidget.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:provider/provider.dart';
 
-class DirectMessagesPage extends StatelessWidget {
+class DirectMessagesPage extends StatefulWidget {
   const DirectMessagesPage({Key? key}) : super(key: key);
 
   @override
+  State<DirectMessagesPage> createState() => _DirectMessagesPageState();
+}
+
+class _DirectMessagesPageState extends State<DirectMessagesPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) context.read<SettingsState>().ensureLoaded();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final st = context.watch<SettingsState>();
     var user = Provider.of<AuthState>(context).userModel ?? UserModel();
     return Scaffold(
       backgroundColor: TwitterColor.white,
@@ -21,7 +36,7 @@ class DirectMessagesPage extends StatelessWidget {
       ),
       body: ListView(
         physics: const BouncingScrollPhysics(),
-        children: const <Widget>[
+        children: <Widget>[
           HeaderWidget(
             'Direct Messages',
             secondHeader: true,
@@ -30,6 +45,8 @@ class DirectMessagesPage extends StatelessWidget {
             "Receive message requests",
             navigateTo: null,
             showDivider: false,
+            switchValue: st.get('receive_message_requests'),
+            onSwitchChanged: (v) => st.set('receive_message_requests', v),
             visibleSwitch: true,
             vPadding: 20,
             subtitle:
@@ -39,6 +56,8 @@ class DirectMessagesPage extends StatelessWidget {
             "Show read receipts",
             navigateTo: null,
             showDivider: false,
+            switchValue: st.get('read_receipts'),
+            onSwitchChanged: (v) => st.set('read_receipts', v),
             visibleSwitch: true,
             subtitle:
                 'When someone sends you a message, people in the conversation will know you\'ve seen it. If you turn off this setting, you won\'t be able to see read receipt from others.',
@@ -48,5 +67,7 @@ class DirectMessagesPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

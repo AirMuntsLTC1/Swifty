@@ -603,6 +603,34 @@ class SupabaseRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // Account settings (one row per user, user_id is the primary key)
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> fetchUserSettings() async {
+    final me = uid;
+    if (me == null) return {};
+    final row = await db
+        .from('user_settings')
+        .select()
+        .eq('user_id', me)
+        .maybeSingle();
+    return row == null ? {} : Map<String, dynamic>.from(row);
+  }
+
+  Future<void> upsertUserSettings(Map<String, dynamic> values) async {
+    final me = uid;
+    if (me == null || values.isEmpty) return;
+    await db.from('user_settings').upsert(
+      {
+        ...values,
+        'user_id': me,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      },
+      onConflict: 'user_id',
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Push tokens (FCM token is stored through a SECURITY DEFINER function)
   // ---------------------------------------------------------------------------
 
@@ -618,5 +646,7 @@ class SupabaseRepository {
     }
   }
 }
+
+
 
 

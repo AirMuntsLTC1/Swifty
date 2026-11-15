@@ -3,8 +3,16 @@ import 'package:flutter/material.dart';
 class CustomCheckBox extends StatefulWidget {
   final bool? isChecked;
   final bool? visibleSwitch;
-  const CustomCheckBox({Key? key, this.isChecked, this.visibleSwitch})
-      : super(key: key);
+  /// When set, the switch is controlled by the page (saved state), not local.
+  final bool? switchValue;
+  final ValueChanged<bool>? onSwitchChanged;
+  const CustomCheckBox({
+    Key? key,
+    this.isChecked,
+    this.visibleSwitch,
+    this.switchValue,
+    this.onSwitchChanged,
+  }) : super(key: key);
 
   @override
   _CustomCheckBoxState createState() => _CustomCheckBoxState();
@@ -22,6 +30,12 @@ class _CustomCheckBoxState extends State<CustomCheckBox> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.onSwitchChanged != null) {
+      return Switch(
+        value: widget.switchValue ?? false,
+        onChanged: widget.onSwitchChanged,
+      );
+    }
     return widget.isChecked != null
         ? ValueListenableBuilder<bool>(
             valueListenable: isChecked,
@@ -52,3 +66,5 @@ class _CustomCheckBoxState extends State<CustomCheckBox> {
               );
   }
 }
+
+
