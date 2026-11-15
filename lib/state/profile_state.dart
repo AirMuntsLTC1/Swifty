@@ -118,6 +118,14 @@ class ProfileState extends ChangeNotifier {
     }
   }
 
+  /// Reloads the profile shown on this page, for example after Edit Profile
+  /// saves a new name, photo or cover.
+  Future<void> refreshProfile() async {
+    await _getloggedInUserProfile(userId);
+    await _getProfileUser(profileId);
+    notifyListeners();
+  }
+
   /// Kept for compatibility. The follow notification is created by a trigger.
   void addFollowNotification() {}
 
@@ -130,3 +138,5 @@ class ProfileState extends ChangeNotifier {
     super.dispose();
   }
 }
+
+

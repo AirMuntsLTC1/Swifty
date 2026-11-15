@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
@@ -126,10 +127,9 @@ class _ProfilePageState extends State<ProfilePage>
                   Container(
                     height: 180,
                     padding: const EdgeInsets.only(top: 28),
-                    child: CacheImage(
-                      path: authState.profileUserModel.bannerImage ??
-                          'https://pbs.twimg.com/profile_banners/457684585/1510495215/1500x500',
-                      fit: BoxFit.fill,
+                    child: SizedBox.expand(
+                      child: _profileCover(
+                          authState.profileUserModel.bannerImage),
                     ),
                   ),
                   Container(
@@ -213,7 +213,8 @@ class _ProfilePageState extends State<ProfilePage>
                                 onPressed: () {
                                   if (isMyProfile) {
                                     Navigator.push(
-                                        context, EditProfilePage.getRoute());
+                                            context, EditProfilePage.getRoute())
+                                        .then((_) => authState.refreshProfile());
                                   } else {
                                     authState.followUser(
                                         removeFollower: isFollower());
@@ -659,3 +660,23 @@ const List<Choice> choices = <Choice>[
 
 
 
+
+/// Profile banner. Grey when there is no cover; an icon if it fails to load.
+Widget _profileCover(String? url) {
+  if (url == null || url.isEmpty) {
+    return Container(color: Colors.grey.shade300);
+  }
+  return CachedNetworkImage(
+    imageUrl: url,
+    fit: BoxFit.cover,
+    width: double.infinity,
+    height: double.infinity,
+    placeholder: (context, _) => Container(color: Colors.grey.shade200),
+    errorWidget: (context, _, __) => Container(
+      color: Colors.grey.shade300,
+      child: const Center(
+        child: Icon(LucideIcons.circleAlert, color: Colors.grey),
+      ),
+    ),
+  );
+}
