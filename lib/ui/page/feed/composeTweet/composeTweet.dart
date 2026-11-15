@@ -93,68 +93,58 @@ class _ComposeTweetReplyPageState extends State<ComposeTweetPage> {
     var state = Provider.of<FeedState>(context, listen: false);
     kScreenLoader.showLoader(context);
 
-    FeedModel tweetModel = await createTweetModel();
-    String? tweetId;
+    try {
+      FeedModel tweetModel = await createTweetModel();
 
-    /// If tweet contain image
-    /// First image is uploaded on firebase storage
-    /// After successful image upload to firebase storage it returns image path
-    /// Add this image path to tweet model and save to firebase database
-    if (_image != null) {
-      await state.uploadFile(_image!).then((imagePath) async {
-        if (imagePath != null) {
-          tweetModel.imagePath = imagePath;
-
-          /// If type of tweet is new tweet
-          if (widget.isTweet) {
-            tweetId = await state.createTweet(tweetModel);
-          }
-
-          /// If type of tweet is  retweet
-          else if (widget.isRetweet) {
-            tweetId = await state.createReTweet(tweetModel);
-          }
-
-          /// If type of tweet is new comment tweet
-          else {
-            tweetId = await state.addCommentToPost(tweetModel);
-          }
+      // Images are uploaded first and the public URL is stored on the row.
+      // If the upload fails, the user is told; nothing is dropped silently.
+      if (_image != null) {
+        final imageUrl = await state.uploadFile(_image!);
+        if (imageUrl == null) {
+          _showSubmitError(
+              'Image upload failed. Check your connection and try again.');
+          return;
         }
-      });
-    }
+        tweetModel.imagePath = imageUrl;
+      }
 
-    /// If tweet did not contain image
-    else {
-      /// If type of tweet is new tweet
+      String? tweetId;
       if (widget.isTweet) {
         tweetId = await state.createTweet(tweetModel);
-      }
-
-      /// If type of tweet is  retweet
-      else if (widget.isRetweet) {
+      } else if (widget.isRetweet) {
         tweetId = await state.createReTweet(tweetModel);
-      }
-
-      /// If type of tweet is new comment tweet
-      else {
+      } else {
         tweetId = await state.addCommentToPost(tweetModel);
       }
-    }
-    tweetModel.key = tweetId;
 
-    /// Checks for username in tweet description
-    /// If username found, sends notification to all tagged user
-    /// If no user found, compose tweet screen is closed and redirect back to home page.
-    await Provider.of<ComposeTweetState>(context, listen: false)
-        .sendNotification(
-            tweetModel, Provider.of<SearchState>(context, listen: false))
-        .then((_) {
-      /// Hide running loader on screen
+      if (tweetId == null) {
+        _showSubmitError('Could not post. Please try again.');
+        return;
+      }
+      tweetModel.key = tweetId;
+
+      // Mention notifications must never block the post itself.
+      try {
+        await Provider.of<ComposeTweetState>(context, listen: false)
+            .sendNotification(
+                tweetModel, Provider.of<SearchState>(context, listen: false));
+      } catch (error) {
+        debugPrint('sendNotification failed: $error');
+      }
+
       kScreenLoader.hideLoader();
+      if (mounted) Navigator.pop(context);
+    } catch (error) {
+      debugPrint('submit failed: $error');
+      _showSubmitError('Something went wrong. Please try again.');
+    }
+  }
 
-      /// Navigate back to home page
-      Navigator.pop(context);
-    });
+  void _showSubmitError(String message) {
+    kScreenLoader.hideLoader();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Return Tweet model which is either a new Tweet , retweet model or comment model
@@ -645,3 +635,5 @@ class _UserTile extends StatelessWidget {
     );
   }
 }
+
+

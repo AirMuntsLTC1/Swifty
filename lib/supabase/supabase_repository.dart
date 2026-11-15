@@ -18,6 +18,29 @@ const String kPostMediaBucket = 'post-media';
 const String kAvatarBucket = 'avatars';
 const String kStoriesBucket = 'stories';
 
+/// Content type for uploads. Without it the storage client sends text/plain,
+/// so the image is served with the wrong type and fails to display.
+String mimeForExtension(String ext) {
+  switch (ext.toLowerCase()) {
+    case '.png':
+      return 'image/png';
+    case '.gif':
+      return 'image/gif';
+    case '.webp':
+      return 'image/webp';
+    case '.heic':
+      return 'image/heic';
+    case '.mp4':
+      return 'video/mp4';
+    case '.mov':
+      return 'video/quicktime';
+    case '.webm':
+      return 'video/webm';
+    default:
+      return 'image/jpeg';
+  }
+}
+
 const String _postSelect =
     'id, author_id, text, audience, tagged_handles, likes, saves, shares, created_at, views';
 
@@ -216,7 +239,14 @@ class SupabaseRepository {
     final me = uid ?? 'anon';
     final ext = p.extension(file.path).isEmpty ? '.jpg' : p.extension(file.path);
     final path = '$me/${DateTime.now().millisecondsSinceEpoch}$ext';
-    await db.storage.from(bucket).upload(path, file);
+    await db.storage.from(bucket).upload(
+          path,
+          file,
+          fileOptions: FileOptions(
+            contentType: mimeForExtension(ext),
+            upsert: false,
+          ),
+        );
     return db.storage.from(bucket).getPublicUrl(path);
   }
 
@@ -432,6 +462,9 @@ class SupabaseRepository {
         replyTweetKeyList: [],
         retweetCount: 0,
         createdAt: r['created_at'].toString(),
+        imagePath: (r['image_url'] == null || r['image_url'].toString().isEmpty)
+            ? null
+            : r['image_url'].toString(),
         user: profiles[authorId] ?? fallbackUser(authorId),
       );
     }).toList();
@@ -441,6 +474,7 @@ class SupabaseRepository {
     required String postId,
     required String text,
     String? parentId,
+    String? imageUrl,
   }) async {
     final me = uid;
     if (me == null) throw StateError('Not signed in');
@@ -451,6 +485,7 @@ class SupabaseRepository {
           'author_id': me,
           'text': text,
           if (parentId != null) 'parent_id': parentId,
+          if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
         })
         .select('id')
         .single();
@@ -583,3 +618,5 @@ class SupabaseRepository {
     }
   }
 }
+
+

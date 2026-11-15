@@ -49,7 +49,7 @@ class FeedState extends AppState {
       return null;
     }
     List<FeedModel>? list;
-    if (!isBusy && feedList != null && feedList!.isNotEmpty) {
+    if (feedList != null && feedList!.isNotEmpty) {
       list = feedList!.where((x) => x.parentkey == null).toList();
       if (list.isEmpty) {
         list = null;
@@ -185,24 +185,35 @@ class FeedState extends AppState {
     return _repo.fetchPost(postID);
   }
 
-  /// Create a new post. Returns the post id.
+  /// Create a new post. Returns the post id, or null when the post was not saved.
   Future<String?> createTweet(FeedModel model) async {
     isBusy = true;
     notifyListeners();
     String? tweetKey;
     try {
-      tweetKey = await _repo.createPost(
+      final newId = await _repo.createPost(
         text: model.description ?? '',
         tags: model.tags ?? const [],
         imageUrl: model.imagePath,
       );
-      final created = await _repo.fetchPost(tweetKey);
+      tweetKey = newId;
+      // Read the row back (with author and media) so it appears at once.
+      // Short retries cover the moment before the row is readable. If it still
+      // is not, the realtime listener adds it when it arrives.
+      FeedModel? created;
+      for (var attempt = 0; attempt < 3 && created == null; attempt++) {
+        created = await _repo.fetchPost(newId);
+        if (created == null) {
+          await Future.delayed(const Duration(milliseconds: 400));
+        }
+      }
       if (created != null) _insertIntoFeed(created);
     } catch (error) {
       cprint(error, errorIn: 'createTweet');
+    } finally {
+      isBusy = false;
+      notifyListeners();
     }
-    isBusy = false;
-    notifyListeners();
     return tweetKey;
   }
 
@@ -319,6 +330,7 @@ class FeedState extends AppState {
         postId: postId,
         text: replyTweet.description ?? '',
         parentId: isNested ? target.key : null,
+        imageUrl: replyTweet.imagePath,
       );
       target.replyTweetKeyList ??= [];
       target.replyTweetKeyList!.add(commentId);
@@ -413,3 +425,5 @@ class FeedState extends AppState {
     _refreshPost(postId);
   }
 }
+
+
