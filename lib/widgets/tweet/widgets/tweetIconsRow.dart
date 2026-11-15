@@ -9,6 +9,7 @@ import 'package:flutter_twitter_clone/state/feedState.dart';
 import 'package:flutter_twitter_clone/ui/page/common/usersListPage.dart';
 import 'package:flutter_twitter_clone/ui/theme/theme.dart';
 import 'package:flutter_twitter_clone/widgets/customWidgets.dart';
+import 'package:flutter_twitter_clone/widgets/newWidget/like_heart_button.dart';
 import 'package:flutter_twitter_clone/widgets/tweet/widgets/tweetBottomSheet.dart';
 import 'package:provider/provider.dart';
 
@@ -63,25 +64,39 @@ class TweetIconsRow extends StatelessWidget {
             TweetBottomSheet().openRetweetBottomSheet(context,
                 type: type, model: model, scaffoldKey: scaffoldKey);
           }),
-          _iconWidget(
-            context,
-            text: isTweetDetail ? '' : model.likeCount.toString(),
-            icon: model.likeList!.any((userId) => userId == authState.userId)
-                ? AppIcon.heartFill
-                : AppIcon.heartEmpty,
-            onPressed: () {
-              addLikeToTweet(context);
-            },
-            iconColor:
-                model.likeList!.any((userId) => userId == authState.userId)
-                    ? iconEnableColor
-                    : iconColor,
-            size: size ?? 20,
-          ),
+          _likeWidget(context, authState, size: size ?? 20),
           _iconWidget(context, text: '', icon: null, sysIcon: LucideIcons.share2,
               onPressed: () {
             shareTweet(context);
           }, iconColor: iconColor, size: size ?? 20),
+        ],
+      ),
+    );
+  }
+
+  /// Like button with the pop-and-fill heart animation.
+  Widget _likeWidget(BuildContext context, AuthState authState,
+      {required double size}) {
+    final liked = model.likeList!.any((userId) => userId == authState.userId);
+    return Expanded(
+      child: Row(
+        children: <Widget>[
+          LikeHeartButton(
+            isLiked: liked,
+            size: size,
+            inactiveColor: iconColor,
+            activeColor: iconEnableColor,
+            onToggle: () => addLikeToTweet(context),
+          ),
+          customText(
+            isTweetDetail ? '' : model.likeCount.toString(),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: iconColor,
+              fontSize: size - 5,
+            ),
+            context: context,
+          ),
         ],
       ),
     );
@@ -272,5 +287,7 @@ class TweetIconsRow extends StatelessWidget {
     );
   }
 }
+
+
 
 
