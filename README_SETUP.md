@@ -31,7 +31,15 @@ The function source is in `supabase/functions/`. The secrets it needs (`EMAIL_CO
 
 The `assets/` folder (images and the HelveticaNeue fonts) was not in the source dump. Copy your existing `assets/` folder into the project root, next to `pubspec.yaml`. Flutter will not build without the files listed in `pubspec.yaml`.
 
-## 5. Build
+## 5. GitHub secrets for the build
+
+In your GitHub repo go to **Settings → Secrets and variables → Actions → Repository secrets** and add:
+- `SUPABASE_URL`: your project URL
+- `SUPABASE_PUBLISHABLE_KEY`: your publishable (anon) key
+
+The build reads these and passes them into the app with `--dart-define`. If either is missing, the build stops with a clear message.
+
+## 6. Build
 
 Builds run on GitHub Actions. Push this project to a GitHub repo and the workflow `.github/workflows/build.yml` builds an arm64 APK and uploads it as an artifact.
 
@@ -42,7 +50,7 @@ flutter pub get
 flutter build apk --release --target-platform=android-arm64 --split-per-abi
 ```
 
-Note: the bare `flutter build` command was the cause of the earlier error. It only prints usage, so it always exits with code 1. The broken workflow `dart.yml` has been removed.
+If you see a `flutter build` usage message, an old `.github/workflows/dart.yml` still exists. Delete it. Running `unzip` overwrites files but does not delete old ones.
 
 ## What is connected now
 
