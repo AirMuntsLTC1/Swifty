@@ -7,7 +7,7 @@
 //   - Owners: live view count, reaction counts, and live reaction bursts.
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -454,11 +454,11 @@ class _StoryBody extends StatelessWidget {
           Transform(
             alignment: Alignment.center,
             transform: Matrix4.identity()
-              ..translate(story.photoDx, story.photoDy)
+              ..translateByDouble(story.photoDx, story.photoDy, 0, 1)
               // photo_rotation is treated as degrees. Check this matches the
               // value your story editor saves.
               ..rotateZ(story.photoRotation * math.pi / 180)
-              ..scale(story.photoScale),
+              ..scaleByDouble(story.photoScale, story.photoScale, story.photoScale, 1),
             child: CacheImage(path: url, fit: BoxFit.cover),
           ),
           if (caption != null)

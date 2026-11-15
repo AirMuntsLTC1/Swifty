@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class RippleButton extends StatelessWidget {
   final Widget child;
@@ -25,9 +25,9 @@ class RippleButton extends StatelessWidget {
           bottom: 0,
           child: TextButton(
               style: ButtonStyle(
-                shape: MaterialStateProperty.all(
+                shape: WidgetStateProperty.all(
                     RoundedRectangleBorder(borderRadius: borderRadius)),
-                foregroundColor: MaterialStateProperty.all(splashColor),
+                foregroundColor: WidgetStateProperty.all(splashColor),
               ),
               onPressed: () {
                 if (onPressed != null) {

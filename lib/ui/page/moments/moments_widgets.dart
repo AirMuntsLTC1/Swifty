@@ -4,7 +4,7 @@
 // matching the rest of the app.
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:flutter_twitter_clone/model/feedModel.dart';

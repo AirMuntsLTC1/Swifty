@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A progress bar with rounded corners and custom colors.
 class CustomProgressbar extends StatefulWidget {

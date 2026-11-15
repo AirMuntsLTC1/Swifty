@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_twitter_clone/helper/enum.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
@@ -131,10 +131,10 @@ class TweetBottomSheet {
                         ),
                         TextButton(
                           style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all(
+                            backgroundColor: WidgetStateProperty.all(
                               TwitterColor.dodgeBlue,
                             ),
-                            foregroundColor: MaterialStateProperty.all(
+                            foregroundColor: WidgetStateProperty.all(
                               TwitterColor.white,
                             ),
                           ),
@@ -259,10 +259,10 @@ class TweetBottomSheet {
                         ),
                         TextButton(
                           style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all(
+                            backgroundColor: WidgetStateProperty.all(
                               TwitterColor.dodgeBlue,
                             ),
-                            foregroundColor: MaterialStateProperty.all(
+                            foregroundColor: WidgetStateProperty.all(
                               TwitterColor.white,
                             ),
                           ),

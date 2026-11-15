@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_twitter_clone/widgets/brand/swifly_brand.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -31,19 +31,19 @@ class CustomFlatButton extends StatelessWidget {
         builder: (context, loading, child) {
           return TextButton(
             style: ButtonStyle(
-              padding: MaterialStateProperty.all(padding),
-              backgroundColor: MaterialStateProperty.all(
+              padding: WidgetStateProperty.all(padding),
+              backgroundColor: WidgetStateProperty.all(
                 loading
                     ? Theme.of(context).disabledColor
                     : color ?? Theme.of(context).primaryColor,
               ),
-              shape: MaterialStateProperty.all(
+              shape: WidgetStateProperty.all(
                 RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(borderRadius)),
               ),
-              overlayColor: MaterialStateProperty.all(
+              overlayColor: WidgetStateProperty.all(
                   color ?? Theme.of(context).primaryColorDark),
-              foregroundColor: MaterialStateProperty.all(
+              foregroundColor: WidgetStateProperty.all(
                 Theme.of(context).colorScheme.onPrimary,
               ),
             ),

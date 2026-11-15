@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Swifly brand colors. The logo and loader are drawn in code (no image files).
 class SwiflyBrand {

@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
@@ -225,7 +225,7 @@ class _QrCodeState extends State<QrCode> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).dividerColor.withOpacity(.2),
+      color: Theme.of(context).dividerColor.withValues(alpha: .2),
       alignment: Alignment.center,
       child: InkWell(
         onTap: () {

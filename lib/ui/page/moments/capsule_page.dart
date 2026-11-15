@@ -3,12 +3,11 @@
 // Plays a list of posts full-screen, like a story deck. Each post stays for
 // about 7 seconds. Tap right or left to skip, long-press to pause, swipe to
 // browse. Used by trending capsules (live: true) and by the explore grid.
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/model/feedModel.dart';
-import 'package:flutter_twitter_clone/model/moment_models.dart';
 import 'package:flutter_twitter_clone/ui/page/moments/moments_widgets.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
 
@@ -215,7 +214,7 @@ class _PostSlide extends StatelessWidget {
                       width: 32,
                       height: 32,
                       child: CacheImage(
-                        path: post.user.profilePic,
+                        path: post.user?.profilePic,
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -223,7 +222,7 @@ class _PostSlide extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      post.user.displayName,
+                      post.user?.displayName ?? 'Swifs user',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: momentTitle(size: 15, color: Colors.white),

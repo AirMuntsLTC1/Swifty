@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 part 'app_icons.dart';
 part 'color/light_color.dart';
@@ -52,9 +52,7 @@ class AppTheme {
       backgroundColor: TwitterColor.dodgeBlue,
     ),
     colorScheme: const ColorScheme(
-      background: Colors.white,
       onPrimary: Colors.white,
-      onBackground: Colors.black,
       onError: Colors.white,
       onSecondary: Colors.white,
       onSurface: Colors.black,
