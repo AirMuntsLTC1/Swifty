@@ -149,6 +149,7 @@ class FeedState extends AppState {
       notifyListeners();
       final posts = await _repo.fetchPosts();
       _feedList = posts.reversed.toList();
+      loadReposts();
       if (_feedList!.isEmpty) _feedList = null;
     } catch (error) {
       cprint(error, errorIn: 'getDataFromDatabase');
@@ -222,14 +223,55 @@ class FeedState extends AppState {
     return tweetKey;
   }
 
-  /// Retweets are stored as a new post, since posts has no parent column.
+  /// Post ids the signed-in user has retweeted.
+  Set<String> _reposted = {};
+  bool isReposted(String? postId) => postId != null && _reposted.contains(postId);
+
+  Future<void> loadReposts() async {
+    try {
+      _reposted = await _repo.fetchRepostedPostIds();
+      notifyListeners();
+    } catch (error) {
+      cprint(error, errorIn: 'loadReposts');
+    }
+  }
+
+  /// Retweet, or undo a retweet. The count changes at once and is reverted
+  /// if the save fails.
+  Future<void> toggleRepost(FeedModel model) async {
+    final id = model.key;
+    if (id == null) return;
+    final wasReposted = _reposted.contains(id);
+    final nowReposted = !wasReposted;
+    _applyRepost(id, model, nowReposted);
+    try {
+      await _repo.setRepost(id, reposted: nowReposted);
+    } catch (error) {
+      cprint(error, errorIn: 'toggleRepost');
+      _applyRepost(id, model, wasReposted);
+    }
+  }
+
+  void _applyRepost(String id, FeedModel model, bool reposted) {
+    if (reposted) {
+      _reposted.add(id);
+    } else {
+      _reposted.remove(id);
+    }
+    final next = (model.retweetCount ?? 0) + (reposted ? 1 : -1);
+    model.retweetCount = next < 0 ? 0 : next;
+    notifyListeners();
+  }
+
+  /// Quote retweet: posts the comment and counts as a retweet of the original.
   Future<String?> createReTweet(FeedModel model) async {
     String? tweetKey;
     try {
       tweetKey = await createTweet(model);
-      if (_tweetToReplyModel != null) {
-        _tweetToReplyModel!.retweetCount =
-            (_tweetToReplyModel!.retweetCount ?? 0) + 1;
+      final original = model.childRetwetkey;
+      if (tweetKey != null && original != null && !_reposted.contains(original)) {
+        await _repo.setRepost(original, reposted: true);
+        _reposted.add(original);
         notifyListeners();
       }
     } catch (error) {

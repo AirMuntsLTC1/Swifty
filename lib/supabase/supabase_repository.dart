@@ -451,6 +451,38 @@ class SupabaseRepository {
   });
   }
 
+  /// Post ids the signed-in user has retweeted.
+  Future<Set<String>> fetchRepostedPostIds() async {
+    return _run('fetchRepostedPostIds', () async {
+      final me = uid;
+      if (me == null) return <String>{};
+      final rows = await db.from('post_reposts').select('post_id').eq('user_id', me);
+      return (rows as List).map((r) => r['post_id'].toString()).toSet();
+    });
+  }
+
+  /// Records or removes the signed-in user's retweet of [postId].
+  /// The database trigger keeps posts.shares (the count) up to date.
+  Future<void> setRepost(String postId, {required bool reposted}) async {
+    return _run('setRepost', () async {
+      final me = uid;
+      if (me == null) return;
+      if (reposted) {
+        await db.from('post_reposts').upsert(
+          {'post_id': postId, 'user_id': me},
+          onConflict: 'post_id,user_id',
+          ignoreDuplicates: true,
+        );
+      } else {
+        await db
+            .from('post_reposts')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', me);
+      }
+    });
+  }
+
   Future<List<String>> fetchSavedPostIds() async {
     return _run('fetchSavedPostIds', () async {
     final me = uid;

@@ -422,32 +422,14 @@ class TweetBottomSheet {
           context,
           AppIcon.retweet,
           isEnable: true,
-          text: 'Retweet',
-          onPressed: () async {
-            var state = Provider.of<FeedState>(context, listen: false);
-            var authState = Provider.of<AuthState>(context, listen: false);
-            var myUser = authState.userModel;
-            myUser = UserModel(
-                displayName: myUser!.displayName ?? myUser.email!.split('@')[0],
-                profilePic: myUser.profilePic,
-                userId: myUser.userId,
-                isVerified: authState.userModel!.isVerified,
-                userName: authState.userModel!.userName);
-            // Prepare current Tweet model to reply
-            FeedModel post = FeedModel(
-                childRetwetkey: model.getTweetKeyToRetweet,
-                createdAt: DateTime.now().toUtc().toString(),
-                user: myUser,
-                userId: myUser.userId!);
-            state.createTweet(post);
-
+          text: Provider.of<FeedState>(context, listen: false)
+                  .isReposted(model.key)
+              ? 'Undo retweet'
+              : 'Retweet',
+          onPressed: () {
+            final state = Provider.of<FeedState>(context, listen: false);
             Navigator.pop(context);
-            var sharedPost = await state.fetchTweet(post.childRetwetkey!);
-            if (sharedPost != null) {
-              sharedPost.retweetCount ??= 0;
-              sharedPost.retweetCount = sharedPost.retweetCount! + 1;
-              state.updateTweet(sharedPost);
-            }
+            state.toggleRepost(model);
           },
         ),
         _widgetBottomSheetRow(
@@ -577,5 +559,7 @@ class TweetBottomSheet {
     );
   }
 }
+
+
 
 
