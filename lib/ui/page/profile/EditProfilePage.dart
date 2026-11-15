@@ -1,19 +1,21 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
 import 'package:flutter_twitter_clone/helper/customRoute.dart';
 import 'package:flutter_twitter_clone/helper/utility.dart';
 import 'package:flutter_twitter_clone/state/authState.dart';
-import 'package:flutter_twitter_clone/ui/page/profile/widgets/circular_image.dart';
 import 'package:flutter_twitter_clone/widgets/cache_image.dart';
 import 'package:flutter_twitter_clone/widgets/customFlatButton.dart';
 import 'package:flutter_twitter_clone/widgets/customWidgets.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({Key? key}) : super(key: key);
+
   static MaterialPageRoute<T> getRoute<T>() {
     return CustomRoute<T>(
         builder: (BuildContext context) => const EditProfilePage());
@@ -30,20 +32,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _bio;
   late TextEditingController _location;
   late TextEditingController _dob;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  /// Date of birth as yyyy-MM-dd, set only when the user picks a new date.
   String? dob;
+  bool _saving = false;
+
   @override
   void initState() {
-    _name = TextEditingController();
-    _bio = TextEditingController();
-    _location = TextEditingController();
-    _dob = TextEditingController();
-    AuthState state = Provider.of<AuthState>(context, listen: false);
-    _name.text = state.userModel?.displayName ?? '';
-    _bio.text = state.userModel?.bio ?? '';
-    _location.text = state.userModel?.location ?? '';
-    _dob.text = Utility.getDob(state.userModel?.dob);
     super.initState();
+    final user = Provider.of<AuthState>(context, listen: false).userModel;
+    _name = TextEditingController(text: user?.displayName ?? '');
+    _bio = TextEditingController(text: user?.bio ?? '');
+    _location = TextEditingController(text: user?.location ?? '');
+    _dob = TextEditingController(text: Utility.getDob(user?.dob));
   }
 
   @override
@@ -56,7 +57,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Widget _body() {
-    var authState = Provider.of<AuthState>(context, listen: false);
+    final authState = Provider.of<AuthState>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -64,7 +65,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           height: 180,
           child: Stack(
             children: <Widget>[
-              _bannerImage(authState),
+              Positioned.fill(child: _bannerImage(authState)),
               Align(
                 alignment: Alignment.bottomLeft,
                 child: _userImage(authState),
@@ -73,81 +74,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ),
         _entry('Name', controller: _name),
-        _entry('Bio', controller: _bio),
+        _entry('Bio', controller: _bio, maxLine: 3),
         _entry('Location', controller: _location),
         InkWell(
           onTap: showCalender,
           child: _entry('Date of birth', enabled: false, controller: _dob),
-        )
+        ),
       ],
     );
   }
 
   Widget _userImage(AuthState authState) {
+    final avatar = authState.userModel?.profilePic;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 0),
       height: 90,
       width: 90,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.white, width: 5),
+      decoration: const BoxDecoration(
+        color: Colors.white,
         shape: BoxShape.circle,
-        image: DecorationImage(
-            image: customAdvanceNetworkImage(authState.userModel!.profilePic),
-            fit: BoxFit.cover),
       ),
-      child: CircleAvatar(
-        radius: 40,
-        backgroundImage: (_image != null
-                ? FileImage(_image!)
-                : customAdvanceNetworkImage(authState.userModel!.profilePic))
-            as ImageProvider,
-        child: Container(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.black38,
-          ),
-          child: Center(
-            child: IconButton(
-              onPressed: uploadImage,
-              icon: const Icon(LucideIcons.camera, color: Colors.white),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _bannerImage(AuthState authState) {
-    return Container(
-      height: 180,
-      decoration: BoxDecoration(
-        image: authState.userModel!.bannerImage == null
-            ? null
-            : DecorationImage(
-                image:
-                    customAdvanceNetworkImage(authState.userModel!.bannerImage),
-                fit: BoxFit.cover),
-      ),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.black45,
-        ),
+      padding: const EdgeInsets.all(5),
+      child: ClipOval(
         child: Stack(
-          children: [
-            _banner != null
-                ? Image.file(_banner!,
-                    fit: BoxFit.fill, width: MediaQuery.of(context).size.width)
-                : CacheImage(
-                    path: authState.userModel!.bannerImage ??
-                        'https://pbs.twimg.com/profile_banners/457684585/1510495215/1500x500',
-                    fit: BoxFit.fill),
-            Center(
-              child: Container(
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    color: Colors.black38),
+          fit: StackFit.expand,
+          children: <Widget>[
+            _image != null
+                ? Image.file(_image!, fit: BoxFit.cover)
+                : CacheImage(path: avatar, fit: BoxFit.cover),
+            Container(
+              color: Colors.black38,
+              child: Center(
                 child: IconButton(
-                  onPressed: uploadBanner,
+                  onPressed: uploadImage,
                   icon: const Icon(LucideIcons.camera, color: Colors.white),
                 ),
               ),
@@ -155,6 +113,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _bannerImage(AuthState authState) {
+    final cover = authState.userModel?.bannerImage;
+    Widget background;
+    if (_banner != null) {
+      background = Image.file(_banner!, fit: BoxFit.cover);
+    } else if (cover != null && cover.isNotEmpty) {
+      background = CacheImage(path: cover, fit: BoxFit.cover);
+    } else {
+      background = Container(color: Colors.grey.shade400);
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        background,
+        Container(color: Colors.black26),
+        Center(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              color: Colors.black38,
+            ),
+            child: IconButton(
+              onPressed: uploadBanner,
+              icon: const Icon(LucideIcons.camera, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -181,54 +170,54 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  void showCalender() async {
-    DateTime? picked = await showDatePicker(
+  Future<void> showCalender() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(2019, DateTime.now().month, DateTime.now().day),
-      firstDate: DateTime(1950, DateTime.now().month, DateTime.now().day + 3),
-      lastDate: DateTime.now().add(const Duration(days: 7)),
+      initialDate: DateTime(now.year - 18, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
     );
+    if (picked == null || !mounted) return;
     setState(() {
-      if (picked != null) {
-        dob = picked.toString();
-        _dob.text = Utility.getDob(dob);
-      }
+      dob = '${picked.year.toString().padLeft(4, '0')}-'
+          '${picked.month.toString().padLeft(2, '0')}-'
+          '${picked.day.toString().padLeft(2, '0')}';
+      _dob.text = DateFormat.yMMMd().format(picked);
     });
   }
 
-  void _submitButton() {
-    if (_name.text.length > 27) {
+  Future<void> _submitButton() async {
+    if (_saving) return;
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      Utility.customSnackBar(context, 'Name cannot be empty');
+      return;
+    }
+    if (name.length > 27) {
       Utility.customSnackBar(context, 'Name length cannot exceed 27 character');
       return;
     }
-    var state = Provider.of<AuthState>(context, listen: false);
-    var model = state.userModel!.copyWith(
-      key: state.userModel!.userId,
-      displayName: state.userModel!.displayName,
-      bio: state.userModel!.bio,
-      contact: state.userModel!.contact,
-      dob: state.userModel!.dob,
-      email: state.userModel!.email,
-      location: state.userModel!.location,
-      profilePic: state.userModel!.profilePic,
-      userId: state.userModel!.userId,
-      bannerImage: state.userModel!.bannerImage,
-    );
-    if (_name.text.isNotEmpty) {
-      model.displayName = _name.text;
-    }
-    if (_bio.text.isNotEmpty) {
-      model.bio = _bio.text;
-    }
-    if (_location.text.isNotEmpty) {
-      model.location = _location.text;
-    }
-    if (dob != null) {
-      model.dob = dob!;
-    }
+    final state = Provider.of<AuthState>(context, listen: false);
+    final current = state.userModel;
+    if (current == null) return;
 
-    state.updateUserProfile(model, image: _image, bannerImage: _banner);
-    Navigator.of(context).pop();
+    final model = current.copyWith(
+      displayName: name,
+      bio: _bio.text.trim(),
+      location: _location.text.trim(),
+      dob: dob ?? current.dob,
+    );
+
+    setState(() => _saving = true);
+    try {
+      await state.updateUserProfile(model, image: _image, bannerImage: _banner);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (_) {
+      // The repository already showed the error. Stay on the page to retry.
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   void uploadImage() {
@@ -247,12 +236,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     });
   }
 
-  openImagePicker(BuildContext context, Function(File) onImageSelected) {
+  void openImagePicker(BuildContext context, Function(File) onImageSelected) {
     showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext sheetContext) {
         return Container(
-          height: 100,
+          height: 130,
           padding: const EdgeInsets.all(10),
           child: Column(
             children: <Widget>[
@@ -265,27 +254,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 children: <Widget>[
                   Expanded(
                     child: CustomFlatButton(
-                      label: "Use Camera",
+                      label: 'Use Camera',
                       borderRadius: 5,
-                      onPressed: () {
-                        getImage(context, ImageSource.camera, onImageSelected);
-                      },
+                      onPressed: () => getImage(
+                          sheetContext, ImageSource.camera, onImageSelected),
                     ),
                   ),
-                  const SizedBox(
-                    width: 10,
-                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: CustomFlatButton(
-                      label: "Use Gallery",
+                      label: 'Use Gallery',
                       borderRadius: 5,
-                      onPressed: () {
-                        getImage(context, ImageSource.gallery, onImageSelected);
-                      },
+                      onPressed: () => getImage(
+                          sheetContext, ImageSource.gallery, onImageSelected),
                     ),
-                  )
+                  ),
                 ],
-              )
+              ),
             ],
           ),
         );
@@ -293,39 +278,49 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  getImage(BuildContext context, ImageSource source,
-      Function(File) onImageSelected) {
-    ImagePicker().pickImage(source: source, imageQuality: 50).then((
-      XFile? file,
-    ) {
-      //FIXME
-      onImageSelected(File(file!.path));
-      Navigator.pop(context);
-    });
+  /// Picks an image. Cancelling the picker keeps the current photo.
+  Future<void> getImage(BuildContext sheetContext, ImageSource source,
+      Function(File) onImageSelected) async {
+    final XFile? file =
+        await ImagePicker().pickImage(source: source, imageQuality: 50);
+    if (!mounted) return;
+    Navigator.pop(sheetContext);
+    if (file != null) {
+      onImageSelected(File(file.path));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
       appBar: AppBar(
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.blue),
-        title: customTitleText(
-          'Profile Edit',
-        ),
+        title: customTitleText('Profile Edit'),
         actions: <Widget>[
           InkWell(
-            onTap: _submitButton,
-            child: const Center(
-              child: Text(
-                'Save',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            onTap: _saving ? null : () => _submitButton(),
+            child: Center(
+              child: _saving
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    )
+                  : const Text(
+                      'Save',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 20),

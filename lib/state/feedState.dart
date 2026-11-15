@@ -147,7 +147,14 @@ class FeedState extends AppState {
       isBusy = true;
       _feedList = null;
       notifyListeners();
-      final posts = await _repo.fetchPosts();
+      final me = _repo.uid;
+      final userIds = <String>[];
+      if (me != null) {
+        userIds.add(me);
+        final profile = await _repo.fetchUser(me);
+        userIds.addAll(profile?.followingList ?? const <String>[]);
+      }
+      final posts = await _repo.fetchHomeFeed(userIds: userIds);
       _feedList = posts.reversed.toList();
       loadReposts();
       if (_feedList!.isEmpty) _feedList = null;
@@ -253,10 +260,17 @@ class FeedState extends AppState {
   }
 
   void _applyRepost(String id, FeedModel model, bool reposted) {
+    final me = _repo.uid;
     if (reposted) {
       _reposted.add(id);
+      model.repostedById = me;
+      model.repostedByName = null;
     } else {
       _reposted.remove(id);
+      if (model.repostedById == me) {
+        model.repostedById = null;
+        model.repostedByName = null;
+      }
     }
     final next = (model.retweetCount ?? 0) + (reposted ? 1 : -1);
     model.retweetCount = next < 0 ? 0 : next;
@@ -435,6 +449,11 @@ class FeedState extends AppState {
     if (model == null) {
       _feedList?.removeWhere((x) => x.key == postId);
     } else {
+      final previous = _feedList?.where((x) => x.key == postId);
+      if (previous != null && previous.isNotEmpty) {
+        model.repostedById = previous.first.repostedById;
+        model.repostedByName = previous.first.repostedByName;
+      }
       _insertIntoFeed(model);
       if (_tweetDetailModelList != null) {
         for (var i = 0; i < _tweetDetailModelList!.length; i++) {
@@ -472,6 +491,8 @@ class FeedState extends AppState {
     _refreshPost(postId);
   }
 }
+
+
 
 
 

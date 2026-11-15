@@ -201,32 +201,35 @@ class AuthState extends AppState {
   }
 
   /// Update display name, bio and avatar for the signed-in user.
+  /// Saves the profile. Uploads run first; a failed upload throws, so the
+  /// edit page stays open and the error is shown to the user.
   Future<void> updateUserProfile(UserModel? userModel,
       {File? image, File? bannerImage}) async {
-    try {
-      final target = userModel ?? _userModel;
-      if (target == null) return;
+    final target = userModel ?? _userModel;
+    if (target == null) return;
 
-      String? avatarUrl;
-      if (image != null) {
-        avatarUrl = await _repo.uploadFile(kAvatarBucket, image);
-        target.profilePic = avatarUrl;
-        Utility.logEvent('user_profile_image');
-      }
-      if (bannerImage != null) {
-        cprint('Banner images are not stored in the Supabase schema yet.');
-      }
-
-      await _repo.updateProfile(
-        displayName: target.displayName,
-        bio: target.bio,
-        avatarUrl: avatarUrl,
-      );
-      await getProfileUser();
-      Utility.logEvent('update_user');
-    } catch (error) {
-      cprint(error, errorIn: 'updateUserProfile');
+    String? avatarUrl;
+    String? coverUrl;
+    if (image != null) {
+      avatarUrl = await _repo.uploadFile(kAvatarBucket, image);
+      target.profilePic = avatarUrl;
+      Utility.logEvent('user_profile_image');
     }
+    if (bannerImage != null) {
+      coverUrl = await _repo.uploadFile(kCoversBucket, bannerImage);
+      target.bannerImage = coverUrl;
+    }
+
+    await _repo.updateProfile(
+      displayName: target.displayName,
+      bio: target.bio,
+      location: target.location,
+      dob: target.dob,
+      avatarUrl: avatarUrl,
+      coverUrl: coverUrl,
+    );
+    await getProfileUser();
+    Utility.logEvent('update_user');
   }
 
   /// Fetch a user's profile by id.
@@ -283,3 +286,5 @@ class AuthState extends AppState {
     super.dispose();
   }
 }
+
+

@@ -18,6 +18,7 @@ import 'package:flutter_twitter_clone/model/user.dart';
 const String kPostMediaBucket = 'post-media';
 const String kAvatarBucket = 'avatars';
 const String kStoriesBucket = 'stories';
+const String kCoversBucket = 'covers';
 
 /// Content type for uploads. Without it the storage client sends text/plain,
 /// so the image is served with the wrong type and fails to display.
@@ -91,6 +92,11 @@ class SupabaseRepository {
       followersList: List<String>.from(followers),
       followingList: List<String>.from(following),
       isVerified: false,
+      bannerImage: (row['cover_url'] ?? '').toString().isEmpty
+          ? null
+          : row['cover_url'].toString(),
+      location: row['location']?.toString(),
+      dob: row['date_of_birth']?.toString(),
     );
   }
 
@@ -186,18 +192,24 @@ class SupabaseRepository {
     String? displayName,
     String? bio,
     String? avatarUrl,
+    String? coverUrl,
+    String? location,
+    String? dob,
   }) async {
     return _run('updateProfile', () async {
-    final me = uid;
-    if (me == null) return;
-    final values = <String, dynamic>{
-      if (displayName != null) 'display_name': displayName,
-      if (bio != null) 'bio': bio,
-      if (avatarUrl != null) 'avatar_url': avatarUrl,
-    };
-    if (values.isEmpty) return;
-    await db.from('profiles').update(values).eq('id', me);
-  });
+      final me = uid;
+      if (me == null) return;
+      final values = <String, dynamic>{
+        if (displayName != null) 'display_name': displayName,
+        if (bio != null) 'bio': bio,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+        if (coverUrl != null) 'cover_url': coverUrl,
+        if (location != null) 'location': location.isEmpty ? null : location,
+        if (dob != null) 'date_of_birth': dob.isEmpty ? null : dob,
+      };
+      if (values.isEmpty) return;
+      await db.from('profiles').update(values).eq('id', me);
+    });
   }
 
   /// Creates the profile row if the signup trigger did not create one.
@@ -313,6 +325,72 @@ class SupabaseRepository {
     final posts = await hydratePosts(list);
     return posts.isEmpty ? null : posts.first;
   });
+  }
+
+  /// Home feed: recent posts plus posts retweeted by [userIds] (the user and
+  /// the people they follow). A retweeted post gets its most recent retweeter
+  /// in `repostedById` / `repostedByName`.
+  Future<List<FeedModel>> fetchHomeFeed({
+    required List<String> userIds,
+    int limit = 60,
+  }) async {
+    return _run('fetchHomeFeed', () async {
+      final results = await Future.wait<dynamic>([
+        db
+            .from('posts')
+            .select(_postSelect)
+            .order('created_at', ascending: false)
+            .limit(limit),
+        userIds.isEmpty
+            ? Future.value(<dynamic>[])
+            : db
+                .from('post_reposts')
+                .select('post_id, user_id, created_at')
+                .inFilter('user_id', userIds)
+                .order('created_at', ascending: false)
+                .limit(limit),
+      ]);
+      final postRows = List<Map<String, dynamic>>.from(results[0] as List);
+      final repostRows = List<Map<String, dynamic>>.from(results[1] as List);
+
+      final seen = postRows.map((r) => r['id'].toString()).toSet();
+      final missing = repostRows
+          .map((r) => r['post_id'].toString())
+          .where((id) => !seen.contains(id))
+          .toSet()
+          .toList();
+      if (missing.isNotEmpty) {
+        final extra =
+            await db.from('posts').select(_postSelect).inFilter('id', missing);
+        postRows.addAll(List<Map<String, dynamic>>.from(extra as List));
+      }
+
+      final feed = await hydratePosts(postRows);
+      final reposterIds =
+          repostRows.map((r) => r['user_id'].toString()).toSet().toList();
+      final reposters = reposterIds.isEmpty
+          ? <String, UserModel>{}
+          : _profileMap(
+              await db.from('profiles').select().inFilter('id', reposterIds)
+                  as List,
+            );
+
+      final byId = {for (final f in feed) f.key!: f};
+      final attached = <String>{};
+      for (final r in repostRows) {
+        final postId = r['post_id'].toString();
+        final model = byId[postId];
+        if (model == null || attached.contains(postId)) continue;
+        final who = reposters[r['user_id'].toString()];
+        model.repostedById = r['user_id'].toString();
+        model.repostedByName = who?.displayName ?? who?.userName ?? '';
+        attached.add(postId);
+      }
+
+      feed.sort((a, b) => DateTime.parse(b.createdAt)
+          .compareTo(DateTime.parse(a.createdAt)));
+      return feed;
+    });
   }
 
   /// Builds FeedModels (author, media, likes, comment count) for post rows.
@@ -740,6 +818,8 @@ class SupabaseRepository {
   });
   }
 }
+
+
 
 
 

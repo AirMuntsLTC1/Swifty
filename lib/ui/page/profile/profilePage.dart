@@ -334,7 +334,9 @@ class _ProfilePageState extends State<ProfilePage>
 
     /// Filter user's tweet among all tweets available in home page tweets list
     if (state.feedList != null && state.feedList!.isNotEmpty) {
-      list = state.feedList!.where((x) => x.userId == id).toList();
+      list = state.feedList!
+          .where((x) => x.userId == id || x.repostedById == id)
+          .toList();
     }
     return WillPopScope(
       onWillPop: _onWillPop,
@@ -653,5 +655,7 @@ const List<Choice> choices = <Choice>[
   Choice(title: 'View Lists', icon: LucideIcons.list),
   Choice(title: 'View Moments', icon: LucideIcons.zap),
 ];
+
+
 
 

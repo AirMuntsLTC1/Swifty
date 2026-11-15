@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 
 import '../customWidgets.dart';
 import 'widgets/retweetWidget.dart';
+import 'package:flutter_twitter_clone/supabase/supabase_repository.dart';
 import 'widgets/tweetImage.dart';
 
 class Tweet extends StatelessWidget {
@@ -200,6 +201,30 @@ class _TweetBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              if (model.repostedById != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: <Widget>[
+                      Icon(AppIcon.retweet, size: 14, color: AppColor.paleSky),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          model.repostedById ==
+                                  SupabaseRepository.instance.uid
+                              ? 'You retweeted'
+                              : '${(model.repostedByName ?? '').isNotEmpty ? model.repostedByName : 'Someone'} retweeted',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColor.paleSky,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 mainAxisSize: MainAxisSize.max,
@@ -395,3 +420,5 @@ class _TweetDetailBody extends StatelessWidget {
     );
   }
 }
+
+

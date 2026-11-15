@@ -19,6 +19,9 @@ class FeedModel {
   String?
       lanCode; //Saving the language of the tweet so to not translate to check which language
   UserModel? user;
+  /// Set when this post was retweeted by someone (shown above the post).
+  String? repostedById;
+  String? repostedByName;
   FeedModel(
       {this.key,
       this.description,
@@ -139,3 +142,5 @@ class FeedModel {
     }
   }
 }
+
+
