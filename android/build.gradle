@@ -1,5 +1,20 @@
 // Set compileSdk 35 and fill a missing namespace for every Android plugin.
 // Older plugins (e.g. qr_code_scanner) have no namespace, which AGP 8 requires.
+// Fix for plugins (e.g. geolocator_android 4.6.x) that read
+// flutter.compileSdkVersion / flutter.minSdkVersion inside their own
+// android {} block. Provide those values to every subproject except
+// :app (which gets the real Flutter Gradle extension).
+subprojects {
+    if (project.name != 'app') {
+        ext.flutter = [
+            compileSdkVersion: 35,
+            minSdkVersion    : 23,
+            targetSdkVersion : 35,
+            ndkVersion       : "25.1.8937393"
+        ]
+    }
+}
+
 subprojects {
     afterEvaluate { proj ->
         proj.tasks.matching { it.name.startsWith('compile') && it.name.contains('Kotlin') }.configureEach {
